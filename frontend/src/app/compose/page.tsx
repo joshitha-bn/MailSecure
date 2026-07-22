@@ -13,9 +13,11 @@ function ComposeRedirect() {
   useEffect(() => {
     const params = new URLSearchParams()
     const to = searchParams.get("to")
+    const cc = searchParams.get("cc")
     const subject = searchParams.get("subject")
     const message = searchParams.get("message")
     if (to) params.set("to", to)
+    if (cc) params.set("cc", cc)
     if (subject) params.set("subject", subject)
     if (message) params.set("message", message)
     router.replace(`/dashboard/compose${params.toString() ? `?${params.toString()}` : ""}`)

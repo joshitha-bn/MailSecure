@@ -3,15 +3,20 @@
 import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import ComposeWindow from "@/components/ComposeWindow"
+import { normalizeAndDedupeRecipients } from "@/utils/recipientUtils"
 
 function ComposeInner() {
   const searchParams = useSearchParams()
-  const router       = useRouter()
+  const router = useRouter()
   const [open, setOpen] = useState(true)
 
-  const defaultTo      = searchParams.get("to")      || ""
-  const defaultSubject = searchParams.get("subject")  || ""
-  const defaultMessage = searchParams.get("message")  || ""
+  const rawTo = searchParams.get("to") || ""
+  const rawCc = searchParams.get("cc") || ""
+  const defaultSubject = searchParams.get("subject") || ""
+  const defaultMessage = searchParams.get("message") || ""
+
+  const defaultTo = normalizeAndDedupeRecipients(rawTo)
+  const defaultCc = normalizeAndDedupeRecipients(rawCc, [defaultTo])
 
   const handleClose = () => {
     setOpen(false)
@@ -24,6 +29,7 @@ function ComposeInner() {
     <ComposeWindow
       onClose={handleClose}
       defaultTo={defaultTo}
+      defaultCc={defaultCc}
       defaultSubject={defaultSubject}
       defaultMessage={defaultMessage}
     />

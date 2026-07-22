@@ -60,19 +60,56 @@ export default function ProfilePage() {
     setSyncing(false)
   }
 
-  useEffect(() => {
+  const loadCurrentUser = () => {
     if (typeof window === "undefined") return
-    const localUser = JSON.parse(localStorage.getItem("user") || "{}")
-    if (!localUser.email) return
-    setUser(localUser)
+    try {
+      const raw = localStorage.getItem("user")
+      if (!raw) return
+      const localUser = JSON.parse(raw)
+      if (!localUser.email) return
+      setUser(localUser)
+      setCounts(getCounts(localUser.email))
+    } catch {
+      // Corrupted localStorage — do nothing
+    }
+  }
+
+  useEffect(() => {
+    loadCurrentUser()
 
     const updateStats = () => {
-      setCounts(getCounts(localUser.email))
+      try {
+        const raw = localStorage.getItem("user")
+        if (!raw) return
+        const localUser = JSON.parse(raw)
+        if (localUser.email) setCounts(getCounts(localUser.email))
+      } catch {}
     }
 
-    updateStats()
+    // Re-read active account whenever it changes (cross-tab via storage event)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "user") {
+        loadCurrentUser()
+      }
+    }
+
+    // Re-read active account on same-tab switches (dispatched by switchAccount)
+    const handleAccountSwitch = () => loadCurrentUser()
+
+    // Re-read when the tab regains focus (user switches back)
+    const handleFocus = () => loadCurrentUser()
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("accountSwitch", handleAccountSwitch)
+    window.addEventListener("focus", handleFocus)
+
     const unsub = subscribe(updateStats)
-    return () => unsub()
+    return () => {
+      unsub()
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("accountSwitch", handleAccountSwitch)
+      window.removeEventListener("focus", handleFocus)
+    }
   }, [])
 
   const copyPublicKey = () => {

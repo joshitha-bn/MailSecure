@@ -7,19 +7,25 @@
  * with the global mail network and could not be read by any inbox.
  */
 import ComposeWindow from "@/components/ComposeWindow"
+import { normalizeAndDedupeRecipients } from "@/utils/recipientUtils"
 
 interface ComposeProps {
   onClose: () => void
   defaultTo?: string
+  defaultCc?: string
   defaultSubject?: string
   defaultMessage?: string
 }
 
-export default function Compose({ onClose, defaultTo, defaultSubject, defaultMessage }: ComposeProps) {
+export default function Compose({ onClose, defaultTo, defaultCc, defaultSubject, defaultMessage }: ComposeProps) {
+  const cleanTo = normalizeAndDedupeRecipients(defaultTo)
+  const cleanCc = normalizeAndDedupeRecipients(defaultCc, [cleanTo])
+
   return (
     <ComposeWindow
       onClose={onClose}
-      defaultTo={defaultTo}
+      defaultTo={cleanTo}
+      defaultCc={cleanCc}
       defaultSubject={defaultSubject}
       defaultMessage={defaultMessage}
     />

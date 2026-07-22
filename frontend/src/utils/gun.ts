@@ -849,6 +849,15 @@ export const sendMailNow = async (mail: any): Promise<string> => {
     gun.get(`user_mail_index:${senderEmail}`).get(id).put(senderMailIndex)
     gun.get(`user_mail_index:${receiverEmail}`).get(id).put(receiverMailIndex)
 
+    if (mail.cc && typeof mail.cc === "string") {
+      const ccAddresses = mail.cc.split(/[,;]+/).map((a: string) => a.trim().toLowerCase()).filter(Boolean)
+      for (const ccAddr of ccAddresses) {
+        if (ccAddr !== senderEmail && ccAddr !== receiverEmail) {
+          gun.get(`user_mail_index:${ccAddr}`).get(id).put(receiverMailIndex)
+        }
+      }
+    }
+
       // 3. 📡 Nostr DM — parallel global relay (fire-and-forget, MUST be before return)
       ; (async () => {
         try {

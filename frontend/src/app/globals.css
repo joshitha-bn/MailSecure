@@ -390,7 +390,7 @@ body {
   padding: 11px 28px;
   background: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-light) 50%, var(--gold-rich) 100%);
   background-size: 200% auto;
-  color: #fff;
+  color: #000;
   border: none;
   border-radius: 25px;
   font-weight: 700;

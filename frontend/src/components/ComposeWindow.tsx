@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from "react"
 import { db } from "@/utils/gun"
 import { isStorageReady } from "@/utils/web3storage"
-import { 
-  PenLine, Save, Minus, Maximize2, Minimize2, X, 
-  Check, WifiOff, AlertCircle, Send, Calendar, 
+import { normalizeAndDedupeRecipients } from "@/utils/recipientUtils"
+import {
+  PenLine, Save, Minus, Maximize2, Minimize2, X,
+  Check, WifiOff, AlertCircle, Send, Calendar,
   Paperclip, Archive, Clock, ShieldCheck, AlertTriangle, Link, Lock
 } from "lucide-react"
 
@@ -25,6 +26,7 @@ interface AttachedFile {
 interface ComposeWindowProps {
   onClose: () => void
   defaultTo?: string
+  defaultCc?: string
   defaultSubject?: string
   defaultMessage?: string
 }
@@ -33,29 +35,31 @@ interface ComposeWindowProps {
 export default function ComposeWindow({
   onClose,
   defaultTo = "",
+  defaultCc = "",
   defaultSubject = "",
   defaultMessage = "",
 }: ComposeWindowProps) {
-  const [recipientEmail, setRecipientEmail] = useState(defaultTo)
+  const initialTo = normalizeAndDedupeRecipients(defaultTo)
+  const initialCc = normalizeAndDedupeRecipients(defaultCc, [initialTo])
+  const [recipientEmail, setRecipientEmail] = useState(initialTo)
   const [isFocused, setIsFocused] = useState(false)
-  const [subject, setSubject]               = useState(defaultSubject)
-  const [message, setMessage]               = useState(defaultMessage)
-  const [status, setStatus]                 = useState<StatusType>("idle")
-  const [statusMsg, setStatusMsg]           = useState("")
-  const [windowState, setWindowState]       = useState<WindowState>("open")
-  const [wasQueued, setWasQueued]           = useState(false)
-  const [attachments, setAttachments]       = useState<AttachedFile[]>([])
-  const [showSchedule, setShowSchedule]     = useState(false)
-  const [scheduleDate, setScheduleDate]     = useState("")
-  const [scheduleTime, setScheduleTime]     = useState("")
-  const [ipfsCid, setIpfsCid]              = useState("")
-  const [showIpfsInput, setShowIpfsInput]   = useState(false)
-  const [draftSaved, setDraftSaved]         = useState(false)
+  const [subject, setSubject] = useState(defaultSubject)
+  const [message, setMessage] = useState(defaultMessage)
+  const [status, setStatus] = useState<StatusType>("idle")
+  const [statusMsg, setStatusMsg] = useState("")
+  const [windowState, setWindowState] = useState<WindowState>("open")
+  const [wasQueued, setWasQueued] = useState(false)
+  const [attachments, setAttachments] = useState<AttachedFile[]>([])
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState("")
+  const [scheduleTime, setScheduleTime] = useState("")
+  const [ipfsCid, setIpfsCid] = useState("")
+  const [showIpfsInput, setShowIpfsInput] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
   const [encryptionReady, setEncryptionReady] = useState<"checking" | "ready" | "no-key">("checking")
-  const [cc, setCc] = useState("")
-  const [bcc, setBcc] = useState("")
+  const [cc, setCc] = useState(initialCc)
 
-  const [storageReady, setStorageReady]   = useState(false)
+  const [storageReady, setStorageReady] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -83,19 +87,22 @@ export default function ComposeWindow({
   }, [])
 
   useEffect(() => {
-    if (!subject && !message && !recipientEmail) return
+    if (!subject && !message && !recipientEmail && !cc) return
     const timer = setInterval(() => saveDraft(true), 30000)
     return () => clearInterval(timer)
-  }, [recipientEmail, subject, message])
+  }, [recipientEmail, cc, subject, message])
 
   const saveDraft = (auto = false) => {
     const user = JSON.parse(localStorage.getItem("user") || "{}")
     if (!user.email) return
     const normalizedEmail = user.email.trim().toLowerCase()
     const drafts = JSON.parse(localStorage.getItem(`drafts_${normalizedEmail}`) || "[]")
+    const cleanTo = normalizeAndDedupeRecipients(recipientEmail)
+    const cleanCc = normalizeAndDedupeRecipients(cc, [cleanTo])
     const draft = {
-      id:      `draft_${Date.now()}`,
-      to:      recipientEmail.trim().toLowerCase(),
+      id: `draft_${Date.now()}`,
+      to: cleanTo,
+      cc: cleanCc,
       subject,
       message,
       savedAt: new Date().toLocaleString(),
@@ -114,7 +121,7 @@ export default function ComposeWindow({
       const reader = new FileReader()
       reader.onload = () => {
         const newFile: AttachedFile = {
-          id:   `file_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          id: `file_${Date.now()}_${Math.random().toString(36).slice(2)}`,
           name: file.name,
           size: file.size < 1024 * 1024
             ? `${(file.size / 1024).toFixed(1)} KB`
@@ -134,7 +141,7 @@ export default function ComposeWindow({
     const cid = ipfsCid.trim()
     if (!cid || (!cid.startsWith("Qm") && !cid.startsWith("bafy"))) return
     const newFile: AttachedFile = {
-      id:   `ipfs_${Date.now()}`,
+      id: `ipfs_${Date.now()}`,
       name: `IPFS: ${cid.slice(0, 12)}...`,
       size: "Decentralized",
       type: "ipfs",
@@ -152,9 +159,10 @@ export default function ComposeWindow({
   const sendMail = async () => {
     const userJson = localStorage.getItem("user")
     const user = userJson ? JSON.parse(userJson) : {}
-    const normalizedRecipient = recipientEmail.trim().toLowerCase()
-    
-    if (!normalizedRecipient || !subject || !message) {
+    const cleanTo = normalizeAndDedupeRecipients(recipientEmail)
+    const cleanCc = normalizeAndDedupeRecipients(cc, [cleanTo])
+
+    if (!cleanTo || !subject || !message) {
       setStatus("error")
       setStatusMsg("Please fill in all fields before sending.")
       return
@@ -162,23 +170,22 @@ export default function ComposeWindow({
 
     try {
       const { sendMailInBackground } = await import("@/utils/backgroundSend")
-      
+
       // 🔥 INSTANT DISPATCH: We don't wait for encryption/PoW/IPFS
       sendMailInBackground({
         user,
-        recipientEmail: normalizedRecipient,
+        recipientEmail: cleanTo,
         subject,
         message,
         attachments,
         scheduleDate,
         scheduleTime,
-        cc,
-        bcc
+        cc: cleanCc
       })
 
       // Close immediately
       onClose()
-      
+
     } catch (err: any) {
       setStatus("error")
       setStatusMsg(`Dispatch Error: ${err?.message}`)
@@ -220,10 +227,10 @@ export default function ComposeWindow({
   return (
     <div style={{
       position: "fixed", zIndex: 1000,
-      bottom:    isMaximized ? "0"     : "24px",
-      right:     isMaximized ? "0"     : "24px",
-      width:     isMaximized ? "100vw" : "800px",
-      height:    isMaximized ? "100vh" : "600px",
+      bottom: isMaximized ? "0" : "24px",
+      right: isMaximized ? "0" : "24px",
+      width: isMaximized ? "100vw" : "800px",
+      height: isMaximized ? "100vh" : "600px",
       background: "var(--bg-input)",
       borderTop: "4px solid var(--gold-mid)",
       borderRadius: isMaximized ? "0" : "8px",
@@ -259,17 +266,17 @@ export default function ComposeWindow({
           <span style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-dim)", width: "60px" }}>TO</span>
           <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
             {recipientEmail && recipientEmail.includes("@") && recipientEmail.split("@")[1].includes(".") && !isFocused ? (
-              <div 
+              <div
                 onClick={() => setIsFocused(true)}
-                style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
+                style={{
+                  display: "flex",
+                  alignItems: "center",
                   gap: "6px",
-                  background: "rgba(212, 175, 55, 0.15)", 
-                  color: "var(--gold-mid)", 
-                  padding: "4px 12px", 
-                  borderRadius: "4px", 
-                  fontSize: "13px", 
+                  background: "rgba(212, 175, 55, 0.15)",
+                  color: "var(--gold-mid)",
+                  padding: "4px 12px",
+                  borderRadius: "4px",
+                  fontSize: "13px",
                   fontWeight: "600",
                   cursor: "text"
                 }}
@@ -296,12 +303,19 @@ export default function ComposeWindow({
               </div>
             ) : (
               <input
+                id="compose-to-input"
+                name="to"
+                type="email"
+                autoComplete="off"
                 style={{ background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px", flex: 1 }}
                 placeholder="recipient@dmail.com"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
                 onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onBlur={() => {
+                  setIsFocused(false)
+                  setRecipientEmail(prev => normalizeAndDedupeRecipients(prev))
+                }}
                 autoFocus={isFocused}
               />
             )}
@@ -309,20 +323,18 @@ export default function ComposeWindow({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "12px" }}>
           <span style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-dim)", width: "60px" }}>CC</span>
-          <input 
-            style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px" }} 
-            placeholder="cc@email.com" 
+          <input
+            id="compose-cc-input"
+            name="cc"
+            type="email"
+            autoComplete="off"
+            style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px" }}
+            placeholder="cc@email.com"
             value={cc}
             onChange={(e) => setCc(e.target.value)}
-          />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "12px" }}>
-          <span style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-dim)", width: "60px" }}>BCC</span>
-          <input 
-            style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px" }} 
-            placeholder="bcc@email.com" 
-            value={bcc}
-            onChange={(e) => setBcc(e.target.value)}
+            onBlur={() => {
+              setCc(prev => normalizeAndDedupeRecipients(prev, [recipientEmail]))
+            }}
           />
         </div>
       </div>
@@ -400,10 +412,10 @@ export default function ComposeWindow({
       {/* ── Toolbar ── */}
       <div style={{ padding: "20px 24px", background: "var(--bg-input)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
-            style={{ 
-              width: "36px", height: "36px", background: "var(--border-color)", border: "none", 
+            style={{
+              width: "36px", height: "36px", background: "var(--border-color)", border: "none",
               borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", color: "var(--text-dim)"
             }}
@@ -413,10 +425,10 @@ export default function ComposeWindow({
           </button>
           <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={handleFileAttach} />
 
-          <button 
+          <button
             onClick={() => setShowIpfsInput(!showIpfsInput)}
-            style={{ 
-              width: "36px", height: "36px", background: showIpfsInput ? "rgba(212, 175, 55, 0.1)" : "var(--border-color)", 
+            style={{
+              width: "36px", height: "36px", background: showIpfsInput ? "rgba(212, 175, 55, 0.1)" : "var(--border-color)",
               border: "none", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", color: showIpfsInput ? "var(--gold-mid)" : "var(--text-dim)"
             }}
@@ -425,10 +437,10 @@ export default function ComposeWindow({
             <Archive size={18} />
           </button>
 
-          <button 
+          <button
             onClick={() => setShowSchedule(!showSchedule)}
-            style={{ 
-              width: "36px", height: "36px", background: showSchedule ? "rgba(212, 175, 55, 0.1)" : "var(--border-color)", 
+            style={{
+              width: "36px", height: "36px", background: showSchedule ? "rgba(212, 175, 55, 0.1)" : "var(--border-color)",
               border: "none", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", color: showSchedule ? "var(--gold-mid)" : "var(--text-dim)"
             }}
@@ -438,9 +450,9 @@ export default function ComposeWindow({
           </button>
 
           <div style={{ width: "1px", height: "36px", background: "var(--border-color)", margin: "0 5px" }} />
-          
-          <button style={{ 
-            width: "36px", height: "36px", background: "var(--border-color)", border: "none", 
+
+          <button style={{
+            width: "36px", height: "36px", background: "var(--border-color)", border: "none",
             borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", color: "var(--text-dim)"
           }}>
@@ -452,7 +464,7 @@ export default function ComposeWindow({
           onClick={sendMail}
           disabled={status === "sending"}
           style={{
-            background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", 
+            background: "var(--gold-mid)", color: "var(--bg-body)", border: "none",
             padding: "12px 28px", borderRadius: "8px", fontWeight: "700",
             fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px",
             boxShadow: "0 4px 15px rgba(212, 175, 55, 0.3)"

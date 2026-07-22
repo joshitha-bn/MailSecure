@@ -98,7 +98,7 @@ export const sendSMTPEmail = async (mailData) => {
   }
 
   const config = getGatewayConfig();
-  const { receiverEmail, subject, message, html, attachments, cc, bcc, replyTo, mailId } = mailData;
+  const { receiverEmail, subject, message, html, attachments, cc, bcc, replyTo, mailId, parentMessageId } = mailData;
 
   // Generate Message-ID using the local mailId
   const customMessageId = `<${mailId}@dmail.com>`;
@@ -115,7 +115,12 @@ export const sendSMTPEmail = async (mailData) => {
     messageId: customMessageId,
     headers: {
       "X-Mailer": "DMail Hybrid Gateway",
-      "X-DMail-Outbound": "true"
+      "X-DMail-Outbound": "true",
+      // Threading headers — critical for replies to appear correctly in Gmail/Outlook
+      ...(parentMessageId ? {
+        "In-Reply-To": parentMessageId,
+        "References": parentMessageId
+      } : {})
     }
   };
 

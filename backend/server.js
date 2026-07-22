@@ -11,13 +11,18 @@ dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
-const PORT = 8765
+const PORT = process.env.PORT || 8765
 
-// ── CORS — allow all origins for local network access ──
+// ── CORS — allow Vercel frontend + local network access ──
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*")
+  res.header("Access-Control-Allow-Origin", CORS_ORIGIN)
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-DMail-Email, X-DMail-Password, x-dmail-email, x-dmail-password")
+  // Security headers
+  res.header("X-Content-Type-Options", "nosniff")
+  res.header("X-Frame-Options", "DENY")
+  res.header("Referrer-Policy", "strict-origin-when-cross-origin")
   if (req.method === "OPTIONS") return res.sendStatus(200)
   next()
 })
@@ -240,11 +245,11 @@ app.post("/api/gateway/config", verifyUser, async (req, res) => {
 
 // ── POST Send External (SMTP Reply & Outbound) ──
 app.post("/api/send-external", verifyUser, async (req, res) => {
-  const { senderEmail, receiverEmail, subject, message, html, attachments, cc, bcc, mailId, threadId } = req.body
+  const { senderEmail, receiverEmail, subject, message, html, attachments, cc, bcc, mailId, threadId, parentMessageId } = req.body
 
-  if (!senderEmail || !receiverEmail || !subject || !message || !mailId || !threadId) {
+  if (!senderEmail || !receiverEmail || !subject || !message || !mailId) {
     return res.status(400).json({
-      error: "Missing required fields (senderEmail, receiverEmail, subject, message, mailId, threadId).",
+      error: "Missing required fields (senderEmail, receiverEmail, subject, message, mailId).",
     })
   }
 
@@ -258,11 +263,25 @@ app.post("/api/send-external", verifyUser, async (req, res) => {
       attachments,
       cc,
       bcc,
-      mailId
+      mailId,
+      // Threading headers for reply grouping in external mail clients
+      parentMessageId: parentMessageId || null
     })
 
     // Index the outgoing message relation in GunDB for proper threading on replies
-    indexOutgoingMessage(messageId, mailId, threadId, senderEmail, subject, gun)
+    indexOutgoingMessage(messageId, mailId, threadId || mailId, senderEmail, subject, gun)
+
+    // Also index under the SMTP-assigned messageId if different (Gmail may override our ID)
+    if (messageId && messageId !== `<${mailId}@dmail.com>`) {
+      const altMapping = {
+        dmailId: mailId,
+        threadId: threadId || mailId,
+        userEmail: senderEmail.trim().toLowerCase(),
+        subject: subject || ""
+      }
+      gun.get("securemail_message_ids").get(messageId).put(altMapping)
+      console.log(`🔑 [SMTP] Dual-indexed SMTP Message-ID: ${messageId}`)
+    }
 
     res.json({ success: true, messageId })
   } catch (err) {
@@ -361,10 +380,40 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("\n🚀 SecureMail GunDB Relay Server")
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   console.log(`✅ Listening on port ${PORT}`)
+  console.log(`✅ CORS Origin: ${CORS_ORIGIN}`)
   console.log(`✅ Local:   http://localhost:${PORT}/gun`)
   ips.forEach((ip) => {
     console.log(`✅ Network: http://${ip}:${PORT}/gun`)
   })
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   console.log("📌 Use the Network URL for cross-device access\n")
+
+  // ── Self-Ping Keepalive (prevents Railway/Render free-tier sleep) ──
+  if (process.env.NODE_ENV === "production") {
+    const SELF_URL = process.env.RAILWAY_STATIC_URL
+      ? `https://${process.env.RAILWAY_STATIC_URL}`
+      : process.env.RENDER_EXTERNAL_URL
+      || `http://localhost:${PORT}`
+    setInterval(async () => {
+      try {
+        await fetch(`${SELF_URL}/health`)
+        console.log("🏓 [Keepalive] Self-ping successful.")
+      } catch (err) {
+        console.warn("⚠️ [Keepalive] Self-ping failed:", err.message)
+      }
+    }, 14 * 60 * 1000) // every 14 minutes
+    console.log("🏓 [Keepalive] Self-ping timer started (every 14 min).")
+  }
 })
+
+// ── Graceful Shutdown Handler ──
+const shutdown = () => {
+  console.log("\n🛑 [Shutdown] Gracefully shutting down...")
+  server.close(() => {
+    console.log("✅ [Shutdown] HTTP server closed.")
+    process.exit(0)
+  })
+  setTimeout(() => process.exit(1), 10000)
+}
+process.on("SIGTERM", shutdown)
+process.on("SIGINT", shutdown)

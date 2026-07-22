@@ -8,6 +8,7 @@ import { Star, Trash2, Mail, Edit3, Lock, Search, ArrowLeft, Paperclip, Send, Re
 interface Draft {
   id: string
   to: string
+  cc?: string
   subject: string
   message: string
   savedAt: string
@@ -17,7 +18,7 @@ function DraftsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlSearch = searchParams.get("search") || ""
-  
+
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
@@ -80,7 +81,8 @@ function DraftsPageContent() {
 
   const openInCompose = (draft: Draft) => {
     const params = new URLSearchParams()
-    if (draft.to)      params.set("to",      draft.to)
+    if (draft.to) params.set("to", draft.to)
+    if (draft.cc) params.set("cc", draft.cc)
     if (draft.subject) params.set("subject", draft.subject)
     if (draft.message) params.set("message", draft.message)
     deleteDraft(draft.id)
@@ -100,9 +102,9 @@ function DraftsPageContent() {
     const isRowChecked = selectedIds.has(draft.id)
     const recipientName = draft.to?.split("@")[0] || "Draft"
     const senderInitial = "D"
-    
+
     return (
-      <div 
+      <div
         key={draft.id}
         onClick={() => setSelectedDraft(draft)}
         style={{
@@ -117,17 +119,17 @@ function DraftsPageContent() {
         )}
 
         {/* Profile Avatar / Selection Trigger */}
-        <div 
+        <div
           onClick={(e) => {
             e.stopPropagation()
             toggleSelection(draft.id, e)
           }}
           style={{
-            width: "40px", height: "40px", borderRadius: "50%", 
-            background: isRowChecked ? "var(--gold-mid)" : "rgba(232, 66, 52, 0.1)", 
+            width: "40px", height: "40px", borderRadius: "50%",
+            background: isRowChecked ? "var(--gold-mid)" : "rgba(232, 66, 52, 0.1)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "14px", fontWeight: "700", 
-            color: isRowChecked ? "var(--bg-body)" : "#e84234", 
+            fontSize: "14px", fontWeight: "700",
+            color: isRowChecked ? "var(--bg-body)" : "#e84234",
             marginRight: "16px", flexShrink: 0,
             cursor: "pointer", position: "relative",
             transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -143,8 +145,8 @@ function DraftsPageContent() {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-            <span style={{ 
-              fontSize: "14px", fontWeight: "700", 
+            <span style={{
+              fontSize: "14px", fontWeight: "700",
               color: "#e84234",
               fontFamily: "Inter, sans-serif",
               display: "flex", alignItems: "center", gap: "6px"
@@ -155,16 +157,16 @@ function DraftsPageContent() {
               {draft.savedAt}
             </span>
           </div>
-          <div style={{ 
-            fontSize: "13px", fontWeight: "600", 
-            color: "var(--text-bright)", overflow: "hidden", 
-            textOverflow: "ellipsis", whiteSpace: "nowrap" 
+          <div style={{
+            fontSize: "13px", fontWeight: "600",
+            color: "var(--text-bright)", overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap"
           }}>
             {draft.subject || "(No subject)"}
           </div>
-          <div style={{ 
-            fontSize: "12px", color: "var(--text-dim)", marginTop: "2px", 
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" 
+          <div style={{
+            fontSize: "12px", color: "var(--text-dim)", marginTop: "2px",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
           }}>
             {cleanMessage(draft.message || "").slice(0, 60)}
           </div>
@@ -179,19 +181,19 @@ function DraftsPageContent() {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "40px", borderLeft: "1px solid #141414", position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px" }}>
-          <button 
+          <button
             onClick={() => setSelectedDraft(null)}
-            style={{ 
-              background: "var(--mail-row-border)", border: "1px solid #1F1F1F", borderRadius: "50%", 
+            style={{
+              background: "var(--mail-row-border)", border: "1px solid #1F1F1F", borderRadius: "50%",
               width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", color: "var(--gold-mid)"
             }}
           >
-            <ArrowLeft size={18} /> 
+            <ArrowLeft size={18} />
           </button>
-          
-          <h1 style={{ 
-            fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", 
+
+          <h1 style={{
+            fontSize: "24px", fontWeight: "700", color: "var(--text-bright)",
             margin: 0, fontFamily: "Inter, sans-serif", flex: 1
           }}>
             {selectedDraft.subject || "(No subject)"}
@@ -200,7 +202,7 @@ function DraftsPageContent() {
 
         <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
           <div style={{
-            width: "48px", height: "48px", borderRadius: "50%", 
+            width: "48px", height: "48px", borderRadius: "50%",
             background: "rgba(232, 66, 52, 0.1)", border: "1px solid rgba(232, 66, 52, 0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "16px", fontWeight: "800", color: "#e84234", marginRight: "16px"
@@ -235,9 +237,9 @@ function DraftsPageContent() {
         </div>
 
         <div style={{ display: "flex", gap: "12px", marginBottom: "40px" }}>
-          <button 
+          <button
             onClick={() => openInCompose(selectedDraft)}
-            style={{ 
+            style={{
               background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px",
               padding: "10px 24px", fontSize: "13px", fontWeight: "700", cursor: "pointer",
               display: "flex", alignItems: "center", gap: "8px"
@@ -245,9 +247,9 @@ function DraftsPageContent() {
           >
             <Edit3 size={16} /> Resume Draft
           </button>
-          <button 
+          <button
             onClick={() => deleteDraft(selectedDraft.id)}
-            style={{ 
+            style={{
               background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px",
               padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer"
             }}
@@ -257,8 +259,8 @@ function DraftsPageContent() {
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ 
-            color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", 
+          <div style={{
+            color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6",
             whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif",
             marginBottom: "40px"
           }}>
@@ -271,8 +273,8 @@ function DraftsPageContent() {
 
   return (
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
-      <div style={{ 
-        width: selectedDraft ? "360px" : "100%", 
+      <div style={{
+        width: selectedDraft ? "360px" : "100%",
         display: "flex", flexDirection: "column", flexShrink: 0,
         transition: "width 0.3s ease",
         maxWidth: selectedDraft ? "360px" : "1200px",
@@ -281,18 +283,18 @@ function DraftsPageContent() {
         <div style={{ padding: "24px 24px 12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Drafts</h2>
-            <button 
+            <button
               onClick={() => { setIsRefreshing(true); loadDrafts(); setTimeout(() => setIsRefreshing(false), 800) }}
               style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
             >
               <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
             </button>
           </div>
-          
+
           <div style={{ position: "relative", marginBottom: "16px" }}>
             <Search size={16} color="var(--text-dim)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search drafts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,7 +305,7 @@ function DraftsPageContent() {
             />
           </div>
 
-          <div style={{ 
+          <div style={{
             background: "rgba(212, 160, 89, 0.05)", border: "1px solid rgba(212, 160, 89, 0.1)",
             padding: "8px 12px", borderRadius: "8px", fontSize: "11px", color: "var(--text-muted)"
           }}>
@@ -311,22 +313,22 @@ function DraftsPageContent() {
           </div>
         </div>
 
-        <div style={{ 
+        <div style={{
           display: "flex", alignItems: "center", gap: "16px",
           padding: "12px 24px", borderBottom: "1px solid #141414",
           background: "rgba(255,255,255,0.02)"
         }}>
-          <button 
+          <button
             onClick={handleToggleSelectAll}
-            style={{ 
-              display: "flex", alignItems: "center", gap: "10px", 
+            style={{
+              display: "flex", alignItems: "center", gap: "10px",
               background: "none", border: "none", color: isAllSelected ? "var(--gold-mid)" : "var(--text-dim)",
               fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: "4px 8px",
               borderRadius: "6px", transition: "all 0.2s"
             }}
           >
-            <div style={{ 
-              width: "18px", height: "18px", borderRadius: "4px", 
+            <div style={{
+              width: "18px", height: "18px", borderRadius: "4px",
               border: `2px solid ${isAllSelected ? "var(--gold-mid)" : "var(--text-dim)"}`,
               background: isAllSelected ? "var(--gold-mid)" : "transparent",
               display: "flex", alignItems: "center", justifyContent: "center"

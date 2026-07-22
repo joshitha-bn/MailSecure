@@ -25,9 +25,10 @@ export const getSavedAccounts = (): SavedAccount[] => {
 }
 
 export const saveAccount = (user: SavedAccount): void => {
-  // 🛡️ [Security Layer] Only allow one account to be saved on this device.
-  // Overwrites any previous accounts to ensure a clean, single-identity state.
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify([user]))
+  // Upsert: update existing entry for this email, or add it as a new entry.
+  // This supports multi-account sessions correctly.
+  const existing = getSavedAccounts().filter((a) => a.email !== user.email)
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify([...existing, user]))
 }
 
 export const removeAccount = (email: string): void => {
@@ -42,6 +43,10 @@ export const logout = (): void => {
 
 export const switchAccount = (account: SavedAccount): void => {
   localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(account))
+  // Notify same-tab listeners (e.g., Profile Settings page) that the active account changed
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("accountSwitch"))
+  }
 }
 
 export const getCurrentAccount = (): SavedAccount | null => {

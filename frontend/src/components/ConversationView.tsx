@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { 
-  ChevronDown, ChevronUp, Reply, Forward, 
-  MoreVertical, Star, Trash2, Archive, 
+import { useRouter } from "next/navigation"
+import {
+  ChevronDown, ChevronUp, Reply, ReplyAll, Forward,
+  MoreVertical, Star, Trash2, Archive,
   Paperclip, Shield, Share2, Send, X,
   Maximize2, Minimize2, Download, FileText, File,
   ArrowLeft, Printer, ExternalLink, Lock
@@ -50,6 +51,7 @@ export default function ConversationView({
   onUpdateStatus,
   onClose
 }: ConversationViewProps) {
+  const router = useRouter()
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([thread.messages[thread.messages.length - 1].id]))
   const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({})
   const [isDecrypting, setIsDecrypting] = useState<Record<string, boolean>>({})
@@ -58,6 +60,54 @@ export default function ConversationView({
   const [replyBody, setReplyBody] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [pendingDecryptId, setPendingDecryptId] = useState<string | null>(null)
+
+  const handleReply = (msg: Message) => {
+    const primaryTo = msg.senderEmail === user.email ? msg.receiverEmail : msg.senderEmail
+    const params = new URLSearchParams({
+      to: primaryTo,
+      cc: "",
+      subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`
+    })
+    router.push(`/dashboard/compose?${params.toString()}`)
+  }
+
+  const handleReplyAll = (msg: Message) => {
+    const primaryTo = msg.senderEmail === user.email ? msg.receiverEmail : msg.senderEmail
+    const rawCcList = [
+      ...(msg as any).cc ? (msg as any).cc.split(/[,;]+/) : [],
+      msg.receiverEmail
+    ].map((a: string) => a.trim().toLowerCase()).filter(Boolean)
+
+    const uniqueCc = new Set<string>()
+    const currentUserEmail = user.email?.trim().toLowerCase()
+    const cleanPrimaryTo = primaryTo.trim().toLowerCase()
+
+    for (const addr of rawCcList) {
+      if (addr !== cleanPrimaryTo && addr !== currentUserEmail) {
+        uniqueCc.add(addr)
+      }
+    }
+
+    const params = new URLSearchParams({
+      to: primaryTo,
+      cc: Array.from(uniqueCc).join(", "),
+      subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`
+    })
+    router.push(`/dashboard/compose?${params.toString()}`)
+  }
+
+  const handleForward = (msg: Message) => {
+    const bodyContent = decryptedMessages[msg.id] || msg.decryptedMessage || msg.message || ""
+    const quotedBody = `\n\n---------- Forwarded message ---------\nFrom: ${msg.senderEmail}\nDate: ${msg.time}\nSubject: ${thread.subject}\nTo: ${msg.receiverEmail}\n\n${cleanMessage(bodyContent)}`
+
+    const params = new URLSearchParams({
+      to: "",
+      cc: "",
+      subject: thread.subject.startsWith("Fwd:") ? thread.subject : `Fwd: ${thread.subject}`,
+      message: quotedBody
+    })
+    router.push(`/dashboard/compose?${params.toString()}`)
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -78,12 +128,12 @@ export default function ConversationView({
 
   const handleDecrypt = async (msg: Message, pass: string) => {
     if (!msg.message || !msg.message.includes("-----BEGIN PGP MESSAGE-----")) return
-    
+
     setIsDecrypting(prev => ({ ...prev, [msg.id]: true }))
     try {
       const decrypted = await decryptMessage(msg.message, user.privateKey, pass)
       const cleaned = cleanMessage(decrypted)
-      
+
       setDecryptedMessages(prev => ({ ...prev, [msg.id]: cleaned }))
       await updateCachedMail(msg.id, {
         decryptedMessage: cleaned,
@@ -131,7 +181,7 @@ export default function ConversationView({
     try {
       console.log(`🛡️ [HybridDecrypt] Fetching encrypted attachment from IPFS: ${cid}`)
       const encryptedPackage = await fetchFromIPFS(cid)
-      
+
       if (!encryptedPackage || !encryptedPackage.key) {
         throw new Error("Invalid hybrid package received from IPFS")
       }
@@ -141,7 +191,7 @@ export default function ConversationView({
       if (!password) return
 
       const decryptedData = await hybridDecrypt(encryptedPackage, user.privateKey, password)
-      
+
       // Create a blob and download
       const blob = new Blob([decryptedData], { type: "application/octet-stream" })
       const url = URL.createObjectURL(blob)
@@ -152,7 +202,7 @@ export default function ConversationView({
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      
+
       console.log("✅ [HybridDecrypt] Attachment decrypted and downloaded.")
     } catch (err) {
       console.error("❌ [HybridDecrypt] Failed:", err)
@@ -161,36 +211,36 @@ export default function ConversationView({
   }
 
   return (
-    <div className="conversation-view" style={{ 
-      display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-panel)" 
+    <div className="conversation-view" style={{
+      display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-panel)"
     }}>
       {/* Header Toolbar — Standardized at 44px height to match folder toolbars */}
-      <div className="folder-toolbar" style={{ 
-        borderBottom: "1px solid var(--border-gold)", 
+      <div className="folder-toolbar" style={{
+        borderBottom: "1px solid var(--border-gold)",
         height: "44px", padding: "0 16px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "var(--bg-card)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button onClick={onClose} className="toolbar-btn" title="Back to list" style={{ background: "none", border: "none" }}>
-             <ArrowLeft size={18} />
+            <ArrowLeft size={18} />
           </button>
           <div className="toolbar-divider" />
-          <button className="toolbar-btn" title="Archive Thread" style={{ background: "none", border: "none" }}><Archive size={18}/></button>
-          <button className="toolbar-btn" title="Report Spam" style={{ background: "none", border: "none" }}><Shield size={18}/></button>
-          <button className="toolbar-btn" title="Delete Thread" style={{ background: "none", border: "none" }}><Trash2 size={18}/></button>
+          <button className="toolbar-btn" title="Archive Thread" style={{ background: "none", border: "none" }}><Archive size={18} /></button>
+          <button className="toolbar-btn" title="Report Spam" style={{ background: "none", border: "none" }}><Shield size={18} /></button>
+          <button className="toolbar-btn" title="Delete Thread" style={{ background: "none", border: "none" }}><Trash2 size={18} /></button>
         </div>
-        
+
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-          <button className="toolbar-btn" title="Print" style={{ background: "none", border: "none" }}><Printer size={18}/></button>
-          <button className="toolbar-btn" title="Open in new window" style={{ background: "none", border: "none" }}><ExternalLink size={18}/></button>
+          <button className="toolbar-btn" title="Print" style={{ background: "none", border: "none" }}><Printer size={18} /></button>
+          <button className="toolbar-btn" title="Open in new window" style={{ background: "none", border: "none" }}><ExternalLink size={18} /></button>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {/* Subject Header Area */}
         <div style={{ padding: "32px 32px 16px" }}>
-          <h2 style={{ 
+          <h2 style={{
             margin: 0, fontSize: "28px", fontWeight: "500", color: "#FFFFFF",
             fontFamily: "'Inter', sans-serif", letterSpacing: "-0.5px"
           }}>{thread.subject}</h2>
@@ -216,14 +266,14 @@ export default function ConversationView({
                 }}>
                   {/* Compact Header for collapsed state */}
                   {!isExpanded && (
-                    <div 
+                    <div
                       onClick={() => toggleExpand(msg.id)}
-                      style={{ 
+                      style={{
                         padding: "10px 16px", cursor: "pointer",
                         display: "flex", alignItems: "center", gap: "12px",
                       }}
                     >
-                      <div style={{ 
+                      <div style={{
                         width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
                         background: isSelf ? "var(--border-gold)" : "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -238,9 +288,9 @@ export default function ConversationView({
                           </span>
                           <span style={{ marginLeft: "auto", fontSize: "11px", color: "var(--text-dim)" }}>{msg.time}</span>
                         </div>
-                        <div style={{ 
+                        <div style={{
                           fontSize: "13px", color: "var(--text-muted)", marginTop: "2px",
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" 
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                         }}>
                           {needsDecrypt ? "🔒 Encrypted Content" : cleanMessage(content).slice(0, 100)}
                         </div>
@@ -251,16 +301,16 @@ export default function ConversationView({
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div style={{ padding: "8px 0" }}>
-                      
+
                       {/* Detailed Sender Info */}
                       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px", cursor: "pointer" }} onClick={() => toggleExpand(msg.id)}>
-                        <div style={{ 
-                          width: "44px", height: "44px", borderRadius: "50%", 
-                          background: "#E8B923", 
+                        <div style={{
+                          width: "44px", height: "44px", borderRadius: "50%",
+                          background: "#E8B923",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: "16px", fontWeight: "700", color: "#000"
                         }}>
-                          {isSelf ? "YO" : msg.senderEmail.substring(0,2).toUpperCase()}
+                          {isSelf ? "YO" : msg.senderEmail.substring(0, 2).toUpperCase()}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: "15px", fontWeight: "500", color: "#FFFFFF" }}>
@@ -274,7 +324,7 @@ export default function ConversationView({
                           <div style={{ fontSize: "12px", color: "#808080", marginBottom: "6px" }}>
                             {msg.time}
                           </div>
-                          <div style={{ 
+                          <div style={{
                             display: "inline-flex", alignItems: "center", gap: "4px",
                             background: "rgba(232, 185, 35, 0.1)", color: "#E8B923", border: "1px solid rgba(232, 185, 35, 0.2)",
                             padding: "2px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: "500"
@@ -296,7 +346,7 @@ export default function ConversationView({
                           <span style={{ color: "rgba(232, 185, 35, 0.3)" }}>|</span>
                           <span>Signed & Encrypted</span>
                           <span style={{ color: "rgba(232, 185, 35, 0.3)" }}>|</span>
-                          <span style={{ fontFamily: "monospace" }}>IPFS: {msg.cid ? `${msg.cid.slice(0,6)}...${msg.cid.slice(-3)}` : "Qm8xKp...rT2"}</span>
+                          <span style={{ fontFamily: "monospace" }}>IPFS: {msg.cid ? `${msg.cid.slice(0, 6)}...${msg.cid.slice(-3)}` : "Qm8xKp...rT2"}</span>
                         </div>
                         <div style={{
                           background: "#E8B923", color: "#000",
@@ -309,28 +359,44 @@ export default function ConversationView({
 
                       {/* Action Buttons Row */}
                       <div style={{ display: "flex", gap: "8px", marginBottom: "32px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "24px" }}>
-                        <button style={{ 
-                          display: "flex", alignItems: "center", gap: "8px",
-                          background: "#E8B923", color: "#000", border: "none",
-                          padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer"
-                        }}>
+                        <button
+                          onClick={() => handleReply(msg)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "8px",
+                            background: "#E8B923", color: "#000", border: "none",
+                            padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer"
+                          }}
+                        >
                           <Reply size={16} /> Reply
                         </button>
-                        <button style={{ 
-                          display: "flex", alignItems: "center", gap: "8px",
-                          background: "rgba(255,255,255,0.04)", color: "#999", border: "none",
-                          padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer"
-                        }}>
+                        <button
+                          onClick={() => handleReplyAll(msg)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "8px",
+                            background: "rgba(255,255,255,0.04)", color: "var(--text-bright)", border: "1px solid rgba(255,255,255,0.1)",
+                            padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer"
+                          }}
+                        >
+                          <ReplyAll size={16} /> Reply All
+                        </button>
+                        <button
+                          onClick={() => handleForward(msg)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "8px",
+                            background: "rgba(255,255,255,0.04)", color: "#999", border: "none",
+                            padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer"
+                          }}
+                        >
                           <Forward size={16} /> Forward
                         </button>
-                        <button style={{ 
+                        <button style={{
                           display: "flex", alignItems: "center", gap: "8px",
                           background: "rgba(255,255,255,0.04)", color: "#999", border: "none",
                           padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer"
                         }}>
                           <Star size={16} /> Star
                         </button>
-                        <button style={{ 
+                        <button style={{
                           display: "flex", alignItems: "center", gap: "8px",
                           background: "rgba(255,255,255,0.04)", color: "#999", border: "none",
                           padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer"
@@ -340,14 +406,14 @@ export default function ConversationView({
                       </div>
 
                       {/* Message Body */}
-                      <div style={{ 
+                      <div style={{
                         fontSize: "14px", lineHeight: "1.6", color: "#A0A0A0",
                         whiteSpace: "pre-wrap", wordBreak: "break-word",
                         fontFamily: "'Inter', sans-serif", margin: "0 0 24px"
                       }}>
                         {needsDecrypt ? (
-                          <div style={{ 
-                            padding: "24px", borderRadius: "8px", 
+                          <div style={{
+                            padding: "24px", borderRadius: "8px",
                             background: "var(--bg-vault)", border: "1px solid var(--border-gold)",
                             display: "flex", flexDirection: "column", gap: "12px",
                             boxShadow: "var(--shadow-deep)"
@@ -364,7 +430,7 @@ export default function ConversationView({
                               }}>
                                 <Lock size={12} /> ECC Curve25519
                               </div>
-                              <button 
+                              <button
                                 className="btn"
                                 onClick={(e) => { e.stopPropagation(); startDecrypt(msg.id); }}
                                 style={{ fontSize: "11px", padding: "6px 16px", borderRadius: "20px" }}
@@ -413,19 +479,19 @@ export default function ConversationView({
                             {cleanMessage(content).split('\n').map((line, i, arr) => {
                               if (line.trim().startsWith('|') || line.trim().match(/^[-•]\s/)) {
                                 const cleanLine = line.trim().replace(/^[|•-]\s*/, '');
-                                const isPrevList = i > 0 && (arr[i-1].trim().startsWith('|') || arr[i-1].trim().match(/^[-•]\s/));
+                                const isPrevList = i > 0 && (arr[i - 1].trim().startsWith('|') || arr[i - 1].trim().match(/^[-•]\s/));
                                 return (
-                                  <div key={i} style={{ 
-                                    borderLeft: "3px solid #E8B923", 
-                                    paddingLeft: "12px", 
-                                    marginTop: isPrevList ? "-12px" : "0", 
+                                  <div key={i} style={{
+                                    borderLeft: "3px solid #E8B923",
+                                    paddingLeft: "12px",
+                                    marginTop: isPrevList ? "-12px" : "0",
                                     color: "#A0A0A0"
                                   }}>
                                     {cleanLine}
                                   </div>
                                 );
                               }
-                              
+
                               // Check if line looks like a golden signature name
                               if (line.trim() === "Vitalik Nakamoto" || line.trim() === msg.senderEmail.split("@")[0] || line.trim() === "EtherX Foundation") {
                                 return <div key={i} style={{ minHeight: "1em", color: "#E8B923", fontWeight: "500", marginTop: "16px" }}>{line}</div>;
@@ -439,65 +505,65 @@ export default function ConversationView({
 
                       {/* Attachments Section */}
                       {(msg.cid || (msg.attachments && msg.attachments.length > 0)) && (
-                         <div style={{ 
-                           marginTop: "24px", padding: "16px", borderRadius: "12px",
-                           background: "rgba(255,255,255,0.015)", border: "1px solid var(--border-gold)"
-                         }}>
-                           <div style={{ 
-                             display: "flex", alignItems: "center", gap: "8px", 
-                             marginBottom: "12px", fontSize: "10px", fontWeight: "800", 
-                             color: "var(--gold-mid)", textTransform: "uppercase", letterSpacing: "0.1em"
-                           }}>
-                              <Paperclip size={14} /> Attachments
-                           </div>
-                           
-                           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                             {msg.cid && (
-                               <div className="attachment-card" style={{
-                                 padding: "10px 14px", borderRadius: "10px", 
-                                 background: "var(--bg-card)", border: "1px solid var(--border-gold)",
-                                 display: "flex", alignItems: "center", gap: "12px", minWidth: "220px"
-                                }}>
-                                 <div style={{ color: "var(--gold-mid)" }}><Shield size={18} /></div>
-                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                   <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-bright)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                     Encrypted Artifact
-                                   </div>
-                                   <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>IPFS · {msg.cid.slice(0, 10)}...</div>
-                                 </div>
-                                 <button onClick={() => handleDownload(msg.cid!, "attachment")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gold-mid)" }}>
-                                   <Download size={16} />
-                                 </button>
-                               </div>
-                             )}
+                        <div style={{
+                          marginTop: "24px", padding: "16px", borderRadius: "12px",
+                          background: "rgba(255,255,255,0.015)", border: "1px solid var(--border-gold)"
+                        }}>
+                          <div style={{
+                            display: "flex", alignItems: "center", gap: "8px",
+                            marginBottom: "12px", fontSize: "10px", fontWeight: "800",
+                            color: "var(--gold-mid)", textTransform: "uppercase", letterSpacing: "0.1em"
+                          }}>
+                            <Paperclip size={14} /> Attachments
+                          </div>
 
-                             {msg.attachments?.map((att: any, i: number) => (
-                               <div key={i} className="attachment-card" style={{
-                                 padding: "10px 14px", borderRadius: "10px", 
-                                 background: "var(--bg-card)", border: "1px solid var(--border-gold)",
-                                 display: "flex", alignItems: "center", gap: "12px", minWidth: "220px"
-                                }}>
-                                 <div style={{ color: "var(--gold-mid)" }}>
-                                   {att.type === "ipfs_hybrid" ? <Lock size={18} /> : <FileText size={18} />}
-                                 </div>
-                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                   <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-bright)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                     {att.name || "Attachment"}
-                                   </div>
-                                   <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>
-                                     {att.type === "ipfs_hybrid" ? "Hybrid Encrypted" : "IPFS"} · {att.size ? `${(att.size / 1024).toFixed(1)} KB` : "Stored"}
-                                   </div>
-                                 </div>
-                                 <button 
-                                   onClick={() => handleDownload(att.cid, att.name, att.type === "ipfs_hybrid")} 
-                                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gold-mid)" }}
-                                 >
-                                   <Download size={16} />
-                                 </button>
-                               </div>
-                             ))}
-                           </div>
-                         </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                            {msg.cid && (
+                              <div className="attachment-card" style={{
+                                padding: "10px 14px", borderRadius: "10px",
+                                background: "var(--bg-card)", border: "1px solid var(--border-gold)",
+                                display: "flex", alignItems: "center", gap: "12px", minWidth: "220px"
+                              }}>
+                                <div style={{ color: "var(--gold-mid)" }}><Shield size={18} /></div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-bright)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    Encrypted Artifact
+                                  </div>
+                                  <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>IPFS · {msg.cid.slice(0, 10)}...</div>
+                                </div>
+                                <button onClick={() => handleDownload(msg.cid!, "attachment")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gold-mid)" }}>
+                                  <Download size={16} />
+                                </button>
+                              </div>
+                            )}
+
+                            {msg.attachments?.map((att: any, i: number) => (
+                              <div key={i} className="attachment-card" style={{
+                                padding: "10px 14px", borderRadius: "10px",
+                                background: "var(--bg-card)", border: "1px solid var(--border-gold)",
+                                display: "flex", alignItems: "center", gap: "12px", minWidth: "220px"
+                              }}>
+                                <div style={{ color: "var(--gold-mid)" }}>
+                                  {att.type === "ipfs_hybrid" ? <Lock size={18} /> : <FileText size={18} />}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-bright)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {att.name || "Attachment"}
+                                  </div>
+                                  <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>
+                                    {att.type === "ipfs_hybrid" ? "Hybrid Encrypted" : "IPFS"} · {att.size ? `${(att.size / 1024).toFixed(1)} KB` : "Stored"}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleDownload(att.cid, att.name, att.type === "ipfs_hybrid")}
+                                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gold-mid)" }}
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
@@ -509,15 +575,15 @@ export default function ConversationView({
       </div>
 
       {/* Inline Reply Box — Polished */}
-      <div style={{ 
+      <div style={{
         padding: "16px 24px", borderTop: "1px solid var(--border-gold)",
         background: "var(--bg-panel)"
       }}>
-        <div style={{ 
+        <div style={{
           border: "1px solid var(--border-gold)", borderRadius: "12px",
           background: "var(--bg-panel)", padding: "4px"
         }}>
-          <textarea 
+          <textarea
             placeholder="Click here to reply..."
             value={replyBody}
             onChange={(e) => setReplyBody(e.target.value)}
@@ -528,15 +594,15 @@ export default function ConversationView({
               resize: "none", fontFamily: "'Raleway', sans-serif"
             }}
           />
-          <div style={{ 
+          <div style={{
             padding: "8px 12px", borderTop: "1px solid rgba(212, 175, 55,0.1)",
             display: "flex", alignItems: "center", justifyContent: "space-between"
           }}>
             <div style={{ display: "flex", gap: "4px" }}>
-              <button className="toolbar-btn" style={{ background: "none", border: "none" }}><Paperclip size={18}/></button>
-              <button className="toolbar-btn" style={{ background: "none", border: "none" }}><Share2 size={18}/></button>
+              <button className="toolbar-btn" style={{ background: "none", border: "none" }}><Paperclip size={18} /></button>
+              <button className="toolbar-btn" style={{ background: "none", border: "none" }}><Share2 size={18} /></button>
             </div>
-            <button 
+            <button
               onClick={handleSend}
               disabled={isSending || !replyBody.trim()}
               className="btn"
@@ -561,7 +627,7 @@ export default function ConversationView({
             <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "20px" }}>
               Enter your password to decrypt the PGP messages in this thread.
             </p>
-            <input 
+            <input
               type="password" className="auth-input" autoFocus
               value={passInput} onChange={(e) => setPassInput(e.target.value)}
               placeholder="Your secure password"

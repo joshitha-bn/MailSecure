@@ -418,7 +418,7 @@ export default function ConversationView({
                             display: "flex", flexDirection: "column", gap: "12px",
                             boxShadow: "var(--shadow-deep)"
                           }}>
-                            <h2 style={{ fontFamily: "Cinzel, serif", fontSize: "16px", color: "var(--text-bright)", margin: 0 }}>ENCRYPTED CONTENT</h2>
+                            <h2 style={{ fontSize: "16px", color: "var(--text-bright)", margin: 0, fontWeight: "700" }}>ENCRYPTED CONTENT</h2>
                             <p style={{ color: "var(--text-muted)", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
                               This message is end-to-end encrypted. Enter your DMail password to unlock.
                             </p>

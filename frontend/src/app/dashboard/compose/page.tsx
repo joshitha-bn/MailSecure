@@ -12,11 +12,14 @@ function ComposeInner() {
 
   const rawTo = searchParams.get("to") || ""
   const rawCc = searchParams.get("cc") || ""
+  const rawBcc = searchParams.get("bcc") || ""
   const defaultSubject = searchParams.get("subject") || ""
   const defaultMessage = searchParams.get("message") || ""
+  const defaultDraftId = searchParams.get("draftId") || undefined
 
   const defaultTo = normalizeAndDedupeRecipients(rawTo)
-  const defaultCc = normalizeAndDedupeRecipients(rawCc, [defaultTo])
+  const defaultCc = normalizeAndDedupeRecipients(rawCc)
+  const defaultBcc = normalizeAndDedupeRecipients(rawBcc)
 
   const handleClose = () => {
     setOpen(false)
@@ -30,8 +33,10 @@ function ComposeInner() {
       onClose={handleClose}
       defaultTo={defaultTo}
       defaultCc={defaultCc}
+      defaultBcc={defaultBcc}
       defaultSubject={defaultSubject}
       defaultMessage={defaultMessage}
+      defaultDraftId={defaultDraftId}
     />
   )
 }

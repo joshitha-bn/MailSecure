@@ -11,7 +11,7 @@ import {
   logout,
   type SavedAccount,
 } from "@/utils/accounts"
-import { clearStore } from "@/utils/mailStore"
+import { clearStore, getCounts, subscribe } from "@/utils/mailStore"
 
 interface AccountSwitcherProps {
   onClose: () => void
@@ -24,6 +24,7 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
   // States
   const [accounts, setAccounts] = useState<SavedAccount[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
+  const [inboxCount, setInboxCount] = useState(0)
   const [removing, setRemoving] = useState<string | null>(null)
   
   // Custom Confirmation State
@@ -38,19 +39,27 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
 
   useEffect(() => {
     refreshAccounts()
+    const unsub = subscribe(() => refreshAccounts())
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (target.closest('.modal-overlay')) return
       if (ref.current && !ref.current.contains(target)) onClose()
     }
     document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
+    return () => {
+      unsub()
+      document.removeEventListener("mousedown", handleClick)
+    }
   }, [])
 
   const refreshAccounts = () => {
     setAccounts(getSavedAccounts())
     const user = getCurrentAccount()
-    if (user) setCurrentEmail(user.email)
+    if (user) {
+      setCurrentEmail(user.email)
+      const c = getCounts(user.email)
+      setInboxCount(c.totalInbox)
+    }
   }
 
   const handleSwitch = (account: SavedAccount) => {
@@ -102,7 +111,7 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
             borderRadius: "24px"
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: "32px", marginBottom: "16px" }}></div>
-            <h3 style={{ marginBottom: "20px", color: themeText, fontFamily: "Cinzel, serif" }}>
+            <h3 style={{ marginBottom: "20px", color: themeText, fontWeight: "700" }}>
               Secure Authorization
             </h3>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "24px", lineHeight: "1.6" }}>
@@ -164,11 +173,14 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
           }}>
             {(accounts.find(a => a.email === currentEmail)?.name || currentEmail).charAt(0).toUpperCase()}
           </div>
-          <div style={{ fontSize: "18px", fontWeight: "700", color: themeGold, fontFamily: "Cinzel, serif" }}>
+          <div style={{ fontSize: "18px", fontWeight: "700", color: themeGold }}>
             {accounts.find(a => a.email === currentEmail)?.name || "Active Session"}
           </div>
           <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "4px" }}>
             {currentEmail}
+          </div>
+          <div style={{ fontSize: "12px", color: themeGold, marginTop: "6px", fontWeight: "600" }}>
+            📬 Inbox: {inboxCount} {inboxCount === 1 ? "mail" : "mails"}
           </div>
           <button 
             onClick={() => { onClose(); router.push("/dashboard/profile") }}

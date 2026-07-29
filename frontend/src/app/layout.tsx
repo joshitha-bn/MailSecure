@@ -2,8 +2,19 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "DMail",
+  title: {
+    default: "EtherX DMail",
+    template: "%s | EtherX DMail",
+  },
   description: "End-to-end encrypted mail client — The Decentralized Email Service",
+  icons: {
+    icon: [
+      { url: "/logo-combined-nobg.png" },
+      { url: "/favicon.ico" }
+    ],
+    shortcut: "/logo-combined-nobg.png",
+    apple: "/icons/icon-192.png",
+  },
 };
 
 const cryptoBridgeScript = `

@@ -3,7 +3,7 @@
 import {
   Inbox, Send, FileText, AlertTriangle, Trash2,
   Star, Mail, Archive, Users, Settings,
-  PenSquare, Database, LogOut, Tag, Plus, ChevronDown, Globe, UserPlus
+  PenSquare, Database, LogOut, Tag, Plus, ChevronDown, Globe, UserPlus, Clock
 } from "lucide-react"
 
 import { useEffect, useState, memo } from "react"
@@ -25,7 +25,7 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const [counts, setCounts] = useState({ inbox: 0, starred: 0, spam: 0, drafts: 0, request: 0, sent: 0, allUnread: 0 })
+  const [counts, setCounts] = useState<{ inbox: number; starred: number; spam: number; drafts: number; request: number; sent: number; outbox: number; allUnread: number }>({ inbox: 0, starred: 0, spam: 0, drafts: 0, request: 0, sent: 0, outbox: 0, allUnread: 0 })
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [userName, setUserName] = useState("")
   const [userEmail, setUserEmail] = useState("")
@@ -137,8 +137,16 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
               <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
                 <Send size={20} style={{ opacity: isActive("sent") ? 1 : 0.7 }} />
                 <span style={{ flex: 1, fontSize: "14px" }}>Sent</span>
+                {counts.sent > 0 && (
+                  <span className="count-badge" style={{ 
+                    fontSize: "11px", fontWeight: "700",
+                    background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
+                    padding: "2px 8px", borderRadius: "10px"
+                  }}>{counts.sent}</span>
+                )}
               </div>
             </Link>
+
 
             {/* Drafts */}
             <Link href="/dashboard/drafts" className={`menu-link ${isActive("drafts") ? "active" : ""}`}>
@@ -155,6 +163,24 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
               </div>
             </Link>
 
+
+            {/* Outbox */}
+            <Link href="/dashboard/outbox" className={`menu-link ${isActive("outbox") ? "active" : ""}`}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+                <Clock size={20} style={{ opacity: isActive("outbox") ? 1 : 0.7 }} />
+                <span style={{ flex: 1, fontSize: "14px" }}>Outbox</span>
+                {counts.outbox > 0 && (
+                  <span className="count-badge" style={{
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    background: isActive("outbox") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
+                    color: isActive("outbox") ? "var(--bg-body)" : "var(--gold-mid)",
+                    padding: "2px 8px",
+                    borderRadius: "10px"
+                  }}>{counts.outbox}</span>
+                )}
+              </div>
+            </Link>
             {/* Requests */}
             <Link href="/dashboard/requests" className={`menu-link ${isActive("requests") ? "active" : ""}`}>
               <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
@@ -302,16 +328,18 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
 
             {/* Contacts */}
             <Link href="/dashboard/contacts" className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
-              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Users size={18} /> Contacts
-              </span>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+                <Users size={20} style={{ opacity: isActive("contacts") ? 1 : 0.7 }} />
+                <span style={{ flex: 1, fontSize: "14px" }}>Contacts</span>
+              </div>
             </Link>
 
             {/* Settings */}
             <Link href="/dashboard/settings" className={`menu-link ${isActive("settings") ? "active" : ""}`}>
-              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Settings size={18} /> Settings
-              </span>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+                <Settings size={20} style={{ opacity: isActive("settings") ? 1 : 0.7 }} />
+                <span style={{ flex: 1, fontSize: "14px" }}>Settings</span>
+              </div>
             </Link>
           </nav>
 
@@ -347,7 +375,7 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
         <div className="modal-overlay" onClick={() => setShowLogoutModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: "400px", textAlign: "center" }}>
             <div style={{ fontSize: "32px", marginBottom: "16px" }}>🚪</div>
-            <h3 style={{ marginBottom: "12px", fontFamily: "Cinzel, serif", fontSize: "20px" }}>Sign Out?</h3>
+            <h3 style={{ marginBottom: "12px", fontSize: "20px", fontWeight: "700" }}>Sign Out?</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: 1.6 }}>
               You are about to sign out of your current session. You credentials will remain saved in your vault.
             </p>

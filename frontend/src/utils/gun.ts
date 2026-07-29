@@ -5,6 +5,7 @@ import { uploadDataToWeb3 } from "@/utils/web3storage"
 import { addToQueue, isOnline } from "@/utils/offlineQueue"
 import { cacheMail, getCachedMails, updateCachedMail } from "@/utils/mailCache"
 import { nostr } from "@/utils/nostr"
+import { MAIL_DOMAIN, MAIL_DOMAIN_ALIAS } from "@/utils/config"
 
 // 🛡️ [Global Crypto Fix] 
 // Browsers block native SubtleCrypto on non-HTTPS/non-localhost origins.
@@ -996,10 +997,10 @@ export const db = {
     })
 
     // Alias announcement
-    const altEmail = cleanEmail.endsWith("@dmail.com")
-      ? cleanEmail.replace("@dmail.com", "@securemail.com")
-      : cleanEmail.endsWith("@securemail.com")
-        ? cleanEmail.replace("@securemail.com", "@dmail.com")
+    const altEmail = cleanEmail.endsWith(`@${MAIL_DOMAIN}`)
+      ? cleanEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`)
+      : cleanEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)
+        ? cleanEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`)
         : ""
 
     const announce = (target: string) => {
@@ -1048,11 +1049,11 @@ export const db = {
 
     // Build variants to try multiple domains in parallel
     const variants = [cleanEmail];
-    if (cleanEmail.endsWith("@dmail.com")) variants.push(cleanEmail.replace("@dmail.com", "@securemail.com"));
-    else if (cleanEmail.endsWith("@securemail.com")) variants.push(cleanEmail.replace("@securemail.com", "@dmail.com"));
+    if (cleanEmail.endsWith(`@${MAIL_DOMAIN}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`));
+    else if (cleanEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`));
     else if (!cleanEmail.includes("@")) {
-      variants.push(`${cleanEmail}@dmail.com`);
-      variants.push(`${cleanEmail}@securemail.com`);
+      variants.push(`${cleanEmail}@${MAIL_DOMAIN}`);
+      variants.push(`${cleanEmail}@${MAIL_DOMAIN_ALIAS}`);
     }
 
     let calledBack = false;
@@ -1201,7 +1202,7 @@ export const db = {
 
     return new Promise((resolve, reject) => {
       const attemptSend = async (recipient: any, isRetry = false) => {
-        const isDmail = mail.receiverEmail.endsWith("@dmail.com") || mail.receiverEmail.endsWith("@securemail.com")
+        const isDmail = mail.receiverEmail.endsWith(`@${MAIL_DOMAIN}`) || mail.receiverEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)
         if (isDmail && !recipient?.publicKey) {
           return reject(new Error(`Recipient ${mail.receiverEmail} not found.`))
         }
@@ -1296,7 +1297,7 @@ export const db = {
         }
       }
 
-      const isDmail = mail.receiverEmail.endsWith("@dmail.com") || mail.receiverEmail.endsWith("@securemail.com")
+      const isDmail = mail.receiverEmail.endsWith(`@${MAIL_DOMAIN}`) || mail.receiverEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)
       if (!isDmail) {
         attemptSend(null)
       } else {
@@ -1372,8 +1373,8 @@ export const db = {
     }
 
     update(cleanEmail)
-    if (cleanEmail.endsWith("@dmail.com")) update(cleanEmail.replace("@dmail.com", "@securemail.com"))
-    else if (cleanEmail.endsWith("@securemail.com")) update(cleanEmail.replace("@securemail.com", "@dmail.com"))
+    if (cleanEmail.endsWith(`@${MAIL_DOMAIN}`)) update(cleanEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+    else if (cleanEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) update(cleanEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
   },
 
   // ✅ Auto-Repair: Fixes corrupted local identity using all available sources
@@ -1481,10 +1482,14 @@ export const db = {
   listenUserMails: (userEmail: string, cb: (mail: any) => void) => {
     const cleanEmail = userEmail.trim().toLowerCase()
 
-    // Compute variants (@dmail.com <-> @securemail.com)
+    // Compute variants (@etherxinnovations.in <-> @securemail.com <-> @dmail.com)
     const variants = [cleanEmail]
-    if (cleanEmail.endsWith("@dmail.com")) variants.push(cleanEmail.replace("@dmail.com", "@securemail.com"))
-    else if (cleanEmail.endsWith("@securemail.com")) variants.push(cleanEmail.replace("@securemail.com", "@dmail.com"))
+    if (cleanEmail.endsWith(`@${MAIL_DOMAIN}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+    else if (cleanEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
+    if (cleanEmail.includes("@")) {
+      const userPrefix = cleanEmail.split("@")[0]
+      variants.push(`${userPrefix}@dmail.com`)
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // 🎯 SINGLE SOURCE OF TRUTH: user_mail_index
@@ -1544,8 +1549,12 @@ export const db = {
   listenSentMails: (senderEmail: string, cb: (mail: any) => void) => {
     const cleanEmail = senderEmail.trim().toLowerCase()
     const variants = [cleanEmail]
-    if (cleanEmail.endsWith("@dmail.com")) variants.push(cleanEmail.replace("@dmail.com", "@securemail.com"))
-    else if (cleanEmail.endsWith("@securemail.com")) variants.push(cleanEmail.replace("@securemail.com", "@dmail.com"))
+    if (cleanEmail.endsWith(`@${MAIL_DOMAIN}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+    else if (cleanEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(cleanEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
+    if (cleanEmail.includes("@")) {
+      const userPrefix = cleanEmail.split("@")[0]
+      variants.push(`${userPrefix}@dmail.com`)
+    }
 
     // Use the same user_mail_index — sent mails are indexed with senderStatus:"sent"
     variants.forEach(email => {

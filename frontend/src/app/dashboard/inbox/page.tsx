@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef, memo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { decryptMessage, encryptMessage, db, cleanMessage, decryptVaultKey, derivePGPPassphrase, validatePGPHeader, getOpenPGP } from "@/utils/gun"
-import { Star, MoreVertical, Archive, Trash2, Mail, Send, Reply, Forward, Shield, Lock, Bell, Settings, Search, ArrowLeft, Paperclip, Tag, Check, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { Star, MoreVertical, Archive, Trash2, Mail, Send, Reply, Forward, Shield, Lock, Bell, Settings, Search, ArrowLeft, Paperclip, Tag, Check, Eye, EyeOff, RefreshCw, Download } from "lucide-react"
 import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/mailStore"
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
@@ -124,10 +124,13 @@ function InboxPageContent() {
     }
     if (user.email) setUserEmail(user.email)
 
-    // 🛡️ [Auto-Unlock] If we have a password in session, try to auto-unlock
-    if (!isUnlocked && user.password && user.privateKey) {
-       console.log("🔒 [Vault] Attempting automatic unlock with session credentials...")
-       handleUnlock(user.password)
+    // 🛡️ Require explicit passphrase entry for vault security.
+    // Only restore unlock state if owner entered password in this active browser session.
+    const activeSessionPass = typeof window !== "undefined" ? sessionStorage.getItem("vault_pass") : null
+    const activeSessionUnlocked = typeof window !== "undefined" ? sessionStorage.getItem("inbox_unlocked") === "true" : false
+    if (!isUnlocked && activeSessionUnlocked && activeSessionPass) {
+       console.log("🔒 [Vault] Restoring active session unlock...")
+       handleUnlock(activeSessionPass)
     }
 
     // Load layout settings
@@ -175,6 +178,10 @@ function InboxPageContent() {
         if (!user.privateKey) throw new Error("No private key found")
         await signData("unlock_inbox", user.privateKey, pass)
         setSessionPassword(pass)
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("inbox_unlocked", "true")
+          sessionStorage.setItem("vault_pass", pass)
+        }
         setIsUnlocked(true)
         console.log("🔓 [Vault] Inbox unlocked successfully via cached key.")
       } catch (e: any) {
@@ -233,9 +240,9 @@ function InboxPageContent() {
       updateMailInStore(mail.id, { isRead: true })
     }
 
-    // Auto-decrypt using stored password
+    // Auto-decrypt using active session password
     const user = JSON.parse(localStorage.getItem("user") || "{}")
-    const passToUse = sessionPassword || user.password
+    const passToUse = sessionPassword || (typeof window !== "undefined" ? sessionStorage.getItem("vault_pass") || "" : "")
     if (passToUse) {
       handleDecrypt(mail, passToUse)
     }
@@ -416,7 +423,8 @@ function InboxPageContent() {
         subject: `${replyMode === "reply" ? "Re:" : "Fwd:"} ${currentSelectedMail.subject}`,
         message: replyText,
         attachments: replyAttachments,
-        threadId: currentSelectedMail.threadId || currentSelectedMail.id
+        threadId: currentSelectedMail.threadId || currentSelectedMail.id,
+        parentMessageId: currentSelectedMail.messageId || currentSelectedMail.id
       })
 
       setReplyMode(null)
@@ -435,85 +443,127 @@ function InboxPageContent() {
     if (!mail) return null
     const isEncrypted = mail.message?.includes("-----BEGIN PGP MESSAGE-----")
 
+    // Parse attachments if stored as JSON string
+    let parsedAttachments: any[] = []
+    if (mail.attachments) {
+      if (typeof mail.attachments === "string") {
+        try { parsedAttachments = JSON.parse(mail.attachments) } catch (e) {}
+      } else if (Array.isArray(mail.attachments)) {
+        parsedAttachments = mail.attachments
+      }
+    }
+
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "40px", borderLeft: "1px solid #141414", position: "relative" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px" }}>
-          <button 
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
+        {/* Header Navigation */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "28px" }}>
+          <button
             onClick={() => { setSelectedMail(null); setReplyMode(null); }}
-            style={{ 
-              background: "var(--mail-row-border)", border: "1px solid #1F1F1F", borderRadius: "50%", 
-              width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "var(--gold-mid)"
+            style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: "50%",
+              width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "var(--gold-mid)", flexShrink: 0, marginTop: "4px",
+              transition: "background 0.2s"
             }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(212,175,55,0.1)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
           >
-            <ArrowLeft size={18} /> 
+            <ArrowLeft size={17} />
           </button>
-          <h1 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif", flex: 1 }}>
+          <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif", flex: 1, lineHeight: 1.3, letterSpacing: "-0.3px" }}>
             {mail.subject || "(No subject)"}
           </h1>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
+        {/* Sender Card */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px",
+          padding: "16px 20px", borderRadius: "14px",
+          background: "rgba(255,255,255,0.03)", border: "1px solid #1a1a1a"
+        }}>
+          {/* Avatar */}
           <div style={{
-            width: "48px", height: "48px", borderRadius: "50%", background: "var(--bg-input)", 
+            width: "46px", height: "46px", borderRadius: "50%", flexShrink: 0,
+            background: `linear-gradient(135deg, rgba(212,175,55,0.3) 0%, rgba(212,175,55,0.08) 100%)`,
+            border: "1.5px solid rgba(212,175,55,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "16px", fontWeight: "800", color: "var(--gold-mid)", marginRight: "16px"
+            fontSize: "18px", fontWeight: "800", color: "var(--gold-mid)",
+            boxShadow: "0 0 20px rgba(212,175,55,0.1)"
           }}>
             {(mail.senderName || mail.senderEmail || "U").charAt(0).toUpperCase()}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-bright)" }}>{mail.senderName || mail.senderEmail}</span>
-              <span style={{ fontSize: "14px", color: "var(--text-dim)" }}>
-                {mail.time && !isNaN(Date.parse(mail.time)) 
-                  ? new Date(mail.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+          {/* Name + address */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-bright)", fontFamily: "Inter, sans-serif" }}>
+                {mail.senderName || mail.senderEmail?.split("@")[0]}
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--text-dim)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
+                {mail.time && !isNaN(Date.parse(mail.time))
+                  ? new Date(mail.time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                   : mail.time}
               </span>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
-              {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).map(lbl => (
-                <span key={lbl.id} style={{
-                  fontSize: "10px", padding: "2px 8px", borderRadius: "4px",
-                  background: `${lbl.color}22`, color: lbl.color,
-                  border: `1px solid ${lbl.color}44`,
-                  display: "flex", alignItems: "center", gap: "4px"
-                }}>
-                  {lbl.name}
-                </span>
-              ))}
+            <div style={{ fontSize: "12px", color: "var(--text-dim)", marginTop: "3px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ opacity: 0.7 }}>{mail.senderEmail}</span>
+              <span style={{ color: "var(--gold-mid)", opacity: 0.5 }}>→</span>
+              <span style={{ opacity: 0.7 }}>{mail.receiverEmail}</span>
             </div>
-            <div style={{ fontSize: "14px", color: "var(--text-dim)", marginTop: "4px" }}>
-              {mail.senderEmail} <span style={{ margin: "0 4px" }}>→</span> {mail.receiverEmail}
-            </div>
+            {/* Labels display */}
+            {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
+                {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).map(lbl => (
+                  <span key={lbl.id} style={{
+                    fontSize: "9px", padding: "2px 7px", borderRadius: "4px",
+                    background: `${lbl.color}22`, color: lbl.color, border: `1px solid ${lbl.color}44`,
+                    fontWeight: "700", textTransform: "uppercase"
+                  }}>{lbl.emoji && <span>{lbl.emoji} </span>}{lbl.name}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Security Badge */}
         <div style={{
-          background: "rgba(212, 175, 55, 0.05)", border: "1px solid rgba(212, 175, 55, 0.15)",
-          borderRadius: "8px", padding: "12px 20px", display: "flex", alignItems: "center", gap: "12px",
-          marginBottom: "32px"
+          background: "rgba(212, 175, 55, 0.04)", border: "1px solid rgba(212, 175, 55, 0.12)",
+          borderRadius: "8px", padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px",
+          marginBottom: "24px"
         }}>
-          <Lock size={14} color="var(--gold-mid)" />
-          <span style={{ fontSize: "12px", color: "var(--gold-mid)", fontFamily: "monospace", flex: 1 }}>
-            {mail.id?.slice(0, 16)}...
+          <Lock size={13} color="var(--gold-mid)" />
+          <span style={{ fontSize: "11px", color: "rgba(212,175,55,0.6)", fontFamily: "monospace", flex: 1, letterSpacing: "0.05em" }}>
+            {mail.id?.slice(0, 20)}...
           </span>
-          <span style={{ fontSize: "12px", color: "var(--gold-deep)", fontWeight: "600" }}>
-            {decryptedContent ? "Decrypted & Verified" : (isEncrypted ? "Signed & Encrypted" : "Verified Identity")}
+          <span style={{ fontSize: "11px", color: "var(--gold-mid)", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            {decryptedContent ? "✓ Decrypted" : (isEncrypted ? "✓ Encrypted" : "✓ Verified")}
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: "12px", marginBottom: "40px", position: "relative" }}>
-          <button onClick={() => setReplyMode("reply")} style={{ background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "10px 24px", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Reply size={16} /> Reply</button>
-          <button onClick={() => setReplyMode("forward")} style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Forward size={16} /> Forward</button>
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "32px", position: "relative", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setReplyMode("reply")}
+            style={{ background: "var(--gold-mid)", color: "#000", border: "none", borderRadius: "8px", padding: "9px 22px", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "7px", boxShadow: "0 4px 15px rgba(212,175,55,0.25)", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(212,175,55,0.4)"; e.currentTarget.style.transform = "translateY(-1px)" }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 15px rgba(212,175,55,0.25)"; e.currentTarget.style.transform = "translateY(0)" }}
+          ><Reply size={15} /> Reply</button>
+          <button
+            onClick={() => setReplyMode("forward")}
+            style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-bright)", border: "1px solid #222", borderRadius: "8px", padding: "9px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "7px", transition: "all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+          ><Forward size={15} /> Forward</button>
           
+          {/* Label Menu */}
           <div style={{ position: "relative" }}>
-            <button 
-              onClick={() => setShowLabelMenu(!showLabelMenu)} 
-              style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+            <button
+              onClick={() => setShowLabelMenu(!showLabelMenu)}
+              style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-bright)", border: "1px solid #222", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "7px", transition: "all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
             >
-              <Tag size={16} /> Label
+              <Tag size={15} /> Label
             </button>
-            
             {showLabelMenu && (
               <div style={{
                 position: "absolute", top: "100%", left: 0, marginTop: "12px",
@@ -530,78 +580,85 @@ function InboxPageContent() {
                 `}</style>
                 <div style={{ fontSize: "10px", color: "var(--text-dim)", padding: "8px 12px 12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: "8px" }}>Assign Label</div>
                 <div style={{ maxHeight: "240px", overflowY: "auto", paddingRight: "4px" }}>
-                  {userLabels.length === 0 ? (
-                    <div style={{ padding: "20px 12px", fontSize: "12px", color: "var(--text-dim)", textAlign: "center" }}>
-                      No labels found. <br/>
-                      <button onClick={() => router.push("/dashboard/settings#labels")} style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer", marginTop: "8px", fontWeight: "700" }}>Manage Labels</button>
-                    </div>
-                  ) : (
-                    userLabels.map(lbl => {
-                      const isTagged = getMailLabels(userEmail, mail.id).includes(lbl.id)
-                      return (
-                        <button 
-                          key={lbl.id}
-                          onClick={() => {
-                            toggleMailLabel(userEmail, mail.id, lbl.id)
-                            setShowLabelMenu(false)
-                          }}
-                          style={{
-                            width: "100%", textAlign: "left", padding: "10px 12px", 
-                            background: isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent",
-                            border: "none", borderRadius: "10px", cursor: "pointer",
-                            display: "flex", alignItems: "center", gap: "12px",
-                            transition: "all 0.2s ease",
-                            marginBottom: "2px"
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.15)" : "rgba(255,255,255,0.03)"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent"}
-                        >
-                          <div style={{ 
-                            width: "14px", height: "14px", borderRadius: "4px", 
-                            background: lbl.color, border: `1px solid ${lbl.color}60`,
-                            boxShadow: `0 0 10px ${lbl.color}30`
-                          }} />
-                          <span style={{ fontSize: "13px", fontWeight: isTagged ? "600" : "500", color: isTagged ? "var(--gold-mid)" : "var(--text-bright)", flex: 1 }}>
-                            {lbl.name}
-                          </span>
-                          {isTagged && <Check size={16} color="var(--gold-mid)" strokeWidth={3} />}
-                        </button>
-                      )
-                    })
-                  )}
+                  {userLabels.map(lbl => {
+                    const isTagged = getMailLabels(userEmail, mail.id).includes(lbl.id)
+                    return (
+                      <button
+                        key={lbl.id}
+                        onClick={() => { toggleMailLabel(userEmail, mail.id, lbl.id); setShowLabelMenu(false) }}
+                        style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent", border: "none", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s ease", marginBottom: "2px" }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.15)" : "rgba(255,255,255,0.03)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent"}
+                      >
+                        <div style={{ width: "14px", height: "14px", borderRadius: "4px", background: lbl.color, border: `1px solid ${lbl.color}60`, boxShadow: `0 0 10px ${lbl.color}30` }} />
+                        <span style={{ fontSize: "13px", fontWeight: isTagged ? "600" : "500", color: isTagged ? "var(--gold-mid)" : "var(--text-bright)", flex: 1 }}>{lbl.name}</span>
+                        {isTagged && <Check size={16} color="var(--gold-mid)" strokeWidth={3} />}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </div>
 
-          <button onClick={() => updateMailInStore(mail.id, { isStarred: !mail.isStarred })} style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}><Star size={16} fill={mail.isStarred ? "var(--gold-mid)" : "none"} color={mail.isStarred ? "var(--gold-mid)" : "var(--text-bright)"} /></button>
-          <button onClick={() => { updateMailInStore(mail.id, { status: "trash" }); setSelectedMail(null); }} style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}><Trash2 size={16} /></button>
+          <button
+            onClick={() => updateMailInStore(mail.id, { isStarred: !mail.isStarred })}
+            style={{ background: "rgba(255,255,255,0.05)", color: mail.isStarred ? "var(--gold-mid)" : "var(--text-bright)", border: `1px solid ${mail.isStarred ? "rgba(212,175,55,0.4)" : "#222"}`, borderRadius: "8px", padding: "9px 14px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}
+          ><Star size={15} fill={mail.isStarred ? "var(--gold-mid)" : "none"} strokeWidth={mail.isStarred ? 0 : 1.8} /></button>
+          <button
+            onClick={() => { updateMailInStore(mail.id, { status: "trash" }); setSelectedMail(null); }}
+            style={{ background: "rgba(232,66,52,0.06)", color: "#e84234", border: "1px solid rgba(232,66,52,0.2)", borderRadius: "8px", padding: "9px 14px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(232,66,52,0.12)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(232,66,52,0.06)"}
+          ><Trash2 size={15} /></button>
         </div>
 
+        {/* Main Content Area */}
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif", marginBottom: "40px", width: "100%" }}>
+          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", fontFamily: "Inter, sans-serif", marginBottom: "40px", width: "100%" }}>
             {decrypting ? (
               "Decrypting secure message..."
             ) : mail.html ? (
-              <div style={{ borderRadius: "8px", overflow: "hidden", background: "#ffffff", border: "1px solid var(--border-gold)", width: "100%" }}>
+              <div style={{ borderRadius: "8px", overflow: "hidden", background: "#0f0f0f", border: "1px solid rgba(212,175,55,0.15)", width: "100%" }}>
                 <iframe
+                  title="email-body"
                   srcDoc={`
+                    <!DOCTYPE html>
                     <html>
                       <head>
+                        <meta charset="utf-8">
+                        <meta name="color-scheme" content="dark">
                         <style>
-                          body {
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                            font-size: 14px;
-                            line-height: 1.6;
-                            color: #333333;
-                            background-color: #ffffff;
-                            margin: 16px;
-                            word-break: break-word;
+                          html, body {
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                            font-size: 14px !important;
+                            line-height: 1.6 !important;
+                            color: #d4d4d4 !important;
+                            background-color: #0f0f0f !important;
+                            margin: 0 !important;
+                            padding: 16px !important;
+                            word-break: break-word !important;
                           }
-                          img {
-                            max-width: 100%;
-                            height: auto;
+                          /* Force dark backgrounds on common Gmail table layouts */
+                          table, td, th, div, section, article, aside, header, footer, main, p {
+                            background-color: transparent !important;
+                            color: inherit !important;
                           }
+                          /* Keep links gold */
+                          a { color: #C5A059 !important; }
+                          /* Images stay full width */
+                          img { max-width: 100% !important; height: auto !important; }
+                          /* Blockquote styling for reply chains */
+                          blockquote {
+                            border-left: 3px solid #C5A059 !important;
+                            margin: 8px 0 8px 8px !important;
+                            padding-left: 12px !important;
+                            color: #888 !important;
+                          }
+                          /* Override Gmail's .gmail_quote colors */
+                          .gmail_quote, .gmail_extra { color: #888 !important; }
+                          /* White boxes inside Gmail often come from inline bgcolor tables */
+                          [bgcolor], [background] { background: transparent !important; }
                         </style>
                       </head>
                       <body>
@@ -614,24 +671,100 @@ function InboxPageContent() {
                     width: "100%",
                     border: "none",
                     minHeight: "350px",
-                    background: "#ffffff",
+                    background: "#0f0f0f",
+                    colorScheme: "dark",
                   }}
                 />
               </div>
             ) : (
-              decryptedContent || mail.message
+              <div style={{ whiteSpace: "pre-wrap" }}>
+                {decryptedContent || mail.message}
+              </div>
             )}
           </div>
-              {/* Attachments & Reply Section (Condensed) */}
-              {replyMode && (
-                <div style={{ marginTop: "auto", border: "1px solid #1F1F1F", borderRadius: "12px", background: "var(--bg-card)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <textarea placeholder="Write your message..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ width: "100%", height: "120px", background: "transparent", border: "none", color: "var(--text-bright)", fontSize: "14px", outline: "none", resize: "none" }} />
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                     <button onClick={() => fileInputRef.current?.click()} style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer" }}><Paperclip size={18} /></button>
-                     <button onClick={handleSendReply} disabled={sendingReply || !replyText} style={{ background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "8px 24px", fontWeight: "700", cursor: "pointer", opacity: sendingReply ? 0.6 : 1 }}>Send</button>
-                  </div>
-                </div>
-              )}
+
+          {/* Received Attachments Section */}
+          {parsedAttachments.length > 0 && (
+            <div style={{
+              marginBottom: "32px", padding: "16px", borderRadius: "12px",
+              background: "rgba(255,255,255,0.02)", border: "1px solid #1F1F1F"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "12px", fontWeight: "700", color: "var(--gold-mid)" }}>
+                <Paperclip size={16} /> Attachments ({parsedAttachments.length})
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                {parsedAttachments.map((att: any, idx: number) => {
+                  const fileName = att.name || att.filename || `Attachment ${idx + 1}`
+                  const fileSize = att.size ? `${(att.size / 1024).toFixed(1)} KB` : ""
+                  const downloadUrl = att.data || (att.cid ? `https://ipfs.io/ipfs/${att.cid}` : null)
+
+                  return (
+                    <div key={idx} style={{
+                      padding: "10px 14px", borderRadius: "8px", background: "var(--bg-card)",
+                      border: "1px solid #222", display: "flex", alignItems: "center", gap: "12px", minWidth: "200px"
+                    }}>
+                      <Paperclip size={18} color="var(--gold-mid)" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-bright)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {fileName}
+                        </div>
+                        {fileSize && <div style={{ fontSize: "11px", color: "var(--text-dim)" }}>{fileSize}</div>}
+                      </div>
+                      {downloadUrl && (
+                        <button
+                          title={`Download ${fileName}`}
+                          onClick={async () => {
+                            try {
+                              if (downloadUrl.startsWith("data:")) {
+                                // Decode data URL → Blob → Object URL → programmatic click
+                                const [header, base64] = downloadUrl.split(",")
+                                const mime = header.match(/:(.*?);/)?.[1] || "application/octet-stream"
+                                const bytes = atob(base64)
+                                const arr = new Uint8Array(bytes.length)
+                                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+                                const blob = new Blob([arr], { type: mime })
+                                const url = URL.createObjectURL(blob)
+                                const a = document.createElement("a")
+                                a.href = url
+                                a.download = fileName
+                                document.body.appendChild(a)
+                                a.click()
+                                document.body.removeChild(a)
+                                setTimeout(() => URL.revokeObjectURL(url), 5000)
+                              } else {
+                                // IPFS or external URL — open in new tab
+                                window.open(downloadUrl, "_blank", "noopener,noreferrer")
+                              }
+                            } catch (e) {
+                              console.error("Download failed:", e)
+                            }
+                          }}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            color: "var(--gold-mid)", display: "flex", alignItems: "center",
+                            padding: "4px", borderRadius: "4px"
+                          }}
+                        >
+                          <Download size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Reply Composition Box */}
+          {replyMode && (
+            <div style={{ marginTop: "auto", border: "1px solid #1F1F1F", borderRadius: "12px", background: "var(--bg-card)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <textarea placeholder="Write your reply message..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ width: "100%", height: "120px", background: "transparent", border: "none", color: "var(--text-bright)", fontSize: "14px", outline: "none", resize: "none" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button onClick={() => fileInputRef.current?.click()} style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer" }}><Paperclip size={18} /></button>
+                <button onClick={handleSendReply} disabled={sendingReply || !replyText} style={{ background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "8px 24px", fontWeight: "700", cursor: "pointer", opacity: sendingReply ? 0.6 : 1 }}>Send</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -668,7 +801,7 @@ function InboxPageContent() {
             <Lock size={32} />
           </div>
           
-          <h2 style={{ fontSize: "28px", fontWeight: "800", color: "var(--text-bright)", marginBottom: "12px", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>Inbox Encrypted</h2>
+          <h2 style={{ fontSize: "28px", fontWeight: "800", color: "var(--text-bright)", marginBottom: "12px" }}>Inbox Encrypted</h2>
           <p style={{ fontSize: "15px", color: "var(--text-dim)", marginBottom: "40px", lineHeight: "1.6" }}>
             Your decentralized inbox is protected by your Sovereign Identity. Enter your vault passphrase to synchronize and decrypt.
           </p>
@@ -854,20 +987,63 @@ function InboxPageContent() {
           ) : filteredMails.length === 0 ? (
             <div style={{ padding: "60px 24px", textAlign: "center", color: "var(--text-dim)" }}>No messages</div>
           ) : (
-            filteredMails.map(mail => (
-              <MailRow 
-                key={mail.id}
-                mail={mail}
-                isSelected={currentSelectedMail?.id === mail.id}
-                onOpen={openMail}
-                onToggleSelection={toggleSelection}
-                isSelectedInBulk={selectedIds.has(mail.id)}
-                onToggleStar={handleToggleStar}
-                layout={inboxLayout}
-                preview={emailPreview}
-                activeLabels={userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id))}
-              />
-            ))
+            (() => {
+              const todayStr = new Date().toLocaleDateString()
+              const yest = new Date()
+              yest.setDate(yest.getDate() - 1)
+              const yestStr = yest.toLocaleDateString()
+
+              const groups: { [key: string]: any[] } = {
+                "Today": [],
+                "Yesterday": [],
+                "Older": []
+              }
+
+              filteredMails.forEach(mail => {
+                if (!mail.time || isNaN(Date.parse(mail.time))) {
+                  groups["Older"].push(mail)
+                } else {
+                  const mDateStr = new Date(mail.time).toLocaleDateString()
+                  if (mDateStr === todayStr) groups["Today"].push(mail)
+                  else if (mDateStr === yestStr) groups["Yesterday"].push(mail)
+                  else groups["Older"].push(mail)
+                }
+              })
+
+              return Object.entries(groups)
+                .filter(([_, groupMails]) => groupMails.length > 0)
+                .map(([label, groupMails]) => (
+                  <div key={label}>
+                    <div style={{
+                      padding: "8px 16px 6px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "var(--gold-mid)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      background: "rgba(255,255,255,0.015)",
+                      borderBottom: "1px solid #141414",
+                      userSelect: "none"
+                    }}>
+                      {label}
+                    </div>
+                    {groupMails.map(mail => (
+                      <MailRow 
+                        key={mail.id}
+                        mail={mail}
+                        isSelected={currentSelectedMail?.id === mail.id}
+                        onOpen={openMail}
+                        onToggleSelection={toggleSelection}
+                        isSelectedInBulk={selectedIds.has(mail.id)}
+                        onToggleStar={handleToggleStar}
+                        layout={inboxLayout}
+                        preview={emailPreview}
+                        activeLabels={userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id))}
+                      />
+                    ))}
+                  </div>
+                ))
+            })()
           )}
         </div>
       </div>

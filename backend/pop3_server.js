@@ -68,7 +68,7 @@ const fetchUserMails = async (email, password) => {
 
                     results.push({
                         id: mail.id,
-                        from: mail.senderEmail || 'unknown@dmail.com',
+                        from: mail.senderEmail || `unknown@${process.env.MAIL_DOMAIN || 'etherxinnovations.in'}`,
                         to: cleanEmail,
                         subject: mail.subject || '(No Subject)',
                         date: new Date(mail.timestamp || Date.now()).toUTCString(),

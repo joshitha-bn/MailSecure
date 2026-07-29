@@ -110,6 +110,7 @@ function SentPageContent() {
 
   const openMail = (mail: any) => {
     setSelectedMail(mail)
+    if (!mail.isRead) updateMailInStore(mail.id, { isRead: true })
   }
 
   const handleToggleStar = (id: string, e: React.MouseEvent) => {
@@ -125,68 +126,84 @@ function SentPageContent() {
     if (!mail) return null
 
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "40px", borderLeft: "1px solid #141414", position: "relative" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px" }}>
-          <button 
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "28px" }}>
+          <button
             onClick={() => setSelectedMail(null)}
-            style={{ 
-              background: "var(--mail-row-border)", border: "1px solid #1F1F1F", borderRadius: "50%", 
-              width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "var(--gold-mid)"
+            style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: "50%",
+              width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "var(--gold-mid)", flexShrink: 0, marginTop: "4px", transition: "background 0.2s"
             }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(212,175,55,0.1)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
           >
-            <ArrowLeft size={18} /> 
+            <ArrowLeft size={17} />
           </button>
-          <h1 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0, flex: 1 }}>
+          <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, flex: 1, lineHeight: 1.3, letterSpacing: "-0.3px" }}>
             {mail.subject || "(No subject)"}
           </h1>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
+        {/* Recipient Card */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px",
+          padding: "16px 20px", borderRadius: "14px",
+          background: "rgba(255,255,255,0.03)", border: "1px solid #1a1a1a"
+        }}>
           <div style={{
-            width: "48px", height: "48px", borderRadius: "50%", background: "var(--bg-input)", 
+            width: "46px", height: "46px", borderRadius: "50%", flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(212,175,55,0.3) 0%, rgba(212,175,55,0.08) 100%)",
+            border: "1.5px solid rgba(212,175,55,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "16px", fontWeight: "800", color: "var(--gold-mid)", marginRight: "16px"
+            fontSize: "18px", fontWeight: "800", color: "var(--gold-mid)",
+            boxShadow: "0 0 20px rgba(212,175,55,0.1)"
           }}>
             {(mail.receiverName || mail.receiverEmail || "U").charAt(0).toUpperCase()}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-bright)" }}>To: {mail.receiverName || mail.receiverEmail}</span>
-              <span style={{ fontSize: "14px", color: "var(--text-dim)" }}>
-                {mail.time && !isNaN(Date.parse(mail.time)) 
-                  ? new Date(mail.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-bright)", fontFamily: "Inter, sans-serif" }}>
+                To: {mail.receiverName || mail.receiverEmail?.split("@")[0]}
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--text-dim)", flexShrink: 0 }}>
+                {mail.time && !isNaN(Date.parse(mail.time))
+                  ? new Date(mail.time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                   : mail.time}
               </span>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
-              {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).map(lbl => (
-                <span key={lbl.id} style={{
-                  fontSize: "10px", padding: "2px 8px", borderRadius: "4px",
-                  background: `${lbl.color}22`, color: lbl.color,
-                  border: `1px solid ${lbl.color}44`,
-                  display: "flex", alignItems: "center", gap: "4px"
-                }}>
-                  {lbl.emoji && <span>{lbl.emoji}</span>}
-                  {lbl.name}
-                </span>
-              ))}
+            <div style={{ fontSize: "12px", color: "var(--text-dim)", marginTop: "3px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ opacity: 0.7 }}>{mail.senderEmail}</span>
+              <span style={{ color: "var(--gold-mid)", opacity: 0.5 }}>→</span>
+              <span style={{ opacity: 0.7 }}>{mail.receiverEmail}</span>
             </div>
-            <div style={{ fontSize: "14px", color: "var(--text-dim)", marginTop: "4px" }}>
-              {mail.senderEmail} <span style={{ margin: "0 4px" }}>→</span> {mail.receiverEmail}
-            </div>
+            {/* Labels */}
+            {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
+                {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).map(lbl => (
+                  <span key={lbl.id} style={{
+                    fontSize: "9px", padding: "2px 7px", borderRadius: "4px",
+                    background: `${lbl.color}22`, color: lbl.color, border: `1px solid ${lbl.color}44`,
+                    fontWeight: "700", textTransform: "uppercase"
+                  }}>{lbl.emoji && <span>{lbl.emoji} </span>}{lbl.name}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "12px", marginBottom: "40px", position: "relative" }}>
-           <div style={{ position: "relative" }}>
-            <button 
-              onClick={() => setShowLabelMenu(!showLabelMenu)} 
-              style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "32px", position: "relative", flexWrap: "wrap" }}>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowLabelMenu(!showLabelMenu)}
+              style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-bright)", border: "1px solid #222", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "7px", transition: "all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
             >
-              <Tag size={16} /> Label
+              <Tag size={15} /> Label
             </button>
-            
             {showLabelMenu && (
               <div style={{
                 position: "absolute", top: "100%", left: 0, marginTop: "12px",
@@ -206,28 +223,14 @@ function SentPageContent() {
                   {userLabels.map(lbl => {
                     const isTagged = getMailLabels(userEmail, mail.id).includes(lbl.id)
                     return (
-                      <button 
+                      <button
                         key={lbl.id}
-                        onClick={() => {
-                          toggleMailLabel(userEmail, mail.id, lbl.id)
-                          setShowLabelMenu(false)
-                        }}
-                        style={{
-                          width: "100%", textAlign: "left", padding: "10px 12px", 
-                          background: isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent",
-                          border: "none", borderRadius: "10px", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: "12px",
-                          transition: "all 0.2s ease",
-                          marginBottom: "2px"
-                        }}
+                        onClick={() => { toggleMailLabel(userEmail, mail.id, lbl.id); setShowLabelMenu(false) }}
+                        style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent", border: "none", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s ease", marginBottom: "2px" }}
                         onMouseEnter={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.15)" : "rgba(255,255,255,0.03)"}
                         onMouseLeave={(e) => e.currentTarget.style.background = isTagged ? "rgba(212, 175, 55, 0.12)" : "transparent"}
                       >
-                        <div style={{ 
-                          width: "14px", height: "14px", borderRadius: "4px", 
-                          background: lbl.color, border: `1px solid ${lbl.color}60`,
-                          boxShadow: `0 0 10px ${lbl.color}30`
-                        }} />
+                        <div style={{ width: "14px", height: "14px", borderRadius: "4px", background: lbl.color, border: `1px solid ${lbl.color}60`, boxShadow: `0 0 10px ${lbl.color}30` }} />
                         <span style={{ fontSize: "13px", fontWeight: isTagged ? "600" : "500", color: isTagged ? "var(--gold-mid)" : "var(--text-bright)", flex: 1 }}>{lbl.name}</span>
                         {isTagged && <Check size={16} color="var(--gold-mid)" strokeWidth={3} />}
                       </button>
@@ -237,12 +240,20 @@ function SentPageContent() {
               </div>
             )}
           </div>
-          <button onClick={() => updateMailInStore(mail.id, { isStarred: !mail.isStarred })} style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}><Star size={16} fill={mail.isStarred ? "var(--gold-mid)" : "none"} color={mail.isStarred ? "var(--gold-mid)" : "var(--text-bright)"} /></button>
-          <button onClick={() => { updateMailInStore(mail.id, { status: "trash" }); setSelectedMail(null); }} style={{ background: "var(--mail-row-border)", color: "var(--text-bright)", border: "1px solid #1F1F1F", borderRadius: "8px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}><Trash2 size={16} /></button>
+          <button
+            onClick={() => updateMailInStore(mail.id, { isStarred: !mail.isStarred })}
+            style={{ background: "rgba(255,255,255,0.05)", color: mail.isStarred ? "var(--gold-mid)" : "var(--text-bright)", border: `1px solid ${mail.isStarred ? "rgba(212,175,55,0.4)" : "#222"}`, borderRadius: "8px", padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}
+          ><Star size={15} fill={mail.isStarred ? "var(--gold-mid)" : "none"} strokeWidth={mail.isStarred ? 0 : 1.8} /></button>
+          <button
+            onClick={() => { updateMailInStore(mail.id, { status: "trash" }); setSelectedMail(null); }}
+            style={{ background: "rgba(232,66,52,0.06)", color: "#e84234", border: "1px solid rgba(232,66,52,0.2)", borderRadius: "8px", padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(232,66,52,0.12)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(232,66,52,0.06)"}
+          ><Trash2 size={15} /></button>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{mail.message}</div>
+          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.7", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{mail.message}</div>
         </div>
       </div>
     )
@@ -331,19 +342,62 @@ function SentPageContent() {
           {filteredMails.length === 0 ? (
             <div style={{ padding: "60px 24px", textAlign: "center", color: "var(--text-dim)" }}>No sent messages</div>
           ) : (
-            filteredMails.map(mail => (
-              <MailRow 
-                key={mail.id}
-                mail={mail}
-                isSelected={selectedMail?.id === mail.id}
-                onOpen={openMail}
-                onToggleSelection={toggleSelection}
-                isSelectedInBulk={selectedIds.has(mail.id)}
-                onToggleStar={handleToggleStar}
-                showToRecipient={true}
-                activeLabels={userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id))}
-              />
-            ))
+            (() => {
+              const todayStr = new Date().toLocaleDateString()
+              const yest = new Date()
+              yest.setDate(yest.getDate() - 1)
+              const yestStr = yest.toLocaleDateString()
+
+              const groups: { [key: string]: any[] } = {
+                "Today": [],
+                "Yesterday": [],
+                "Older": []
+              }
+
+              filteredMails.forEach(mail => {
+                if (!mail.time || isNaN(Date.parse(mail.time))) {
+                  groups["Older"].push(mail)
+                } else {
+                  const mDateStr = new Date(mail.time).toLocaleDateString()
+                  if (mDateStr === todayStr) groups["Today"].push(mail)
+                  else if (mDateStr === yestStr) groups["Yesterday"].push(mail)
+                  else groups["Older"].push(mail)
+                }
+              })
+
+              return Object.entries(groups)
+                .filter(([_, groupMails]) => groupMails.length > 0)
+                .map(([label, groupMails]) => (
+                  <div key={label}>
+                    <div style={{
+                      padding: "8px 16px 6px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "var(--gold-mid)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      background: "rgba(255,255,255,0.015)",
+                      borderBottom: "1px solid #141414",
+                      userSelect: "none"
+                    }}>
+                      {label}
+                    </div>
+                    {groupMails.map(mail => (
+                      <MailRow 
+                        key={mail.id}
+                        mail={mail}
+                        isSelected={selectedMail?.id === mail.id}
+                        onOpen={openMail}
+                        onToggleSelection={toggleSelection}
+                        isSelectedInBulk={selectedIds.has(mail.id)}
+                        onToggleStar={handleToggleStar}
+                        showToRecipient={true}
+                        activeLabels={userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id))}
+                      />
+                    ))}
+                  </div>
+                ))
+            })()
           )}
         </div>
       </div>

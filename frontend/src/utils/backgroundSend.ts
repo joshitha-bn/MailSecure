@@ -3,6 +3,7 @@ import { autoSaveContact } from "@/utils/contacts"
 import { uploadFileToIPFS, uploadToIPFS, getLocalNode } from "@/utils/ipfs"
 import { updateMailInStore } from "@/utils/mailStore"
 import { hybridEncrypt } from "@/utils/cryptoHybrid"
+import { isInternalDmailAddress } from "@/utils/config"
 
 interface SendMailParams {
   user: any
@@ -15,6 +16,7 @@ interface SendMailParams {
   cc?: string
   bcc?: string
   threadId?: string
+  parentMessageId?: string
 }
 
 export const cleanRecipients = (primaryRecipient: string, rawCc: string = ""): { recipientEmail: string; cleanCc: string } => {
@@ -52,7 +54,8 @@ export const sendMailInBackground = async ({
   scheduleTime,
   cc: rawCc = "",
   bcc,
-  threadId: threadIdParam
+  threadId: threadIdParam,
+  parentMessageId
 }: SendMailParams) => {
   const { recipientEmail, cleanCc: cc } = cleanRecipients(rawRecipient, rawCc)
   const mailId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -71,6 +74,7 @@ export const sendMailInBackground = async ({
     isPending: true,
     isOptimistic: true,
     isDecrypted: true, // Show raw message immediately to sender
+    isRead: true, // Sender already read their own message
     hasAttachments: attachments.length > 0,
     attachmentCount: attachments.length,
   }
@@ -82,7 +86,7 @@ export const sendMailInBackground = async ({
         console.log(`🚀 [BackgroundSend] Starting dispatch for ${recipientEmail}`)
 
         // Step A: Recipient Lookup
-        const isDmail = recipientEmail.endsWith("@dmail") || recipientEmail.endsWith("@dmail.com") || recipientEmail.endsWith("@securemail.com")
+        const isDmail = isInternalDmailAddress(recipientEmail)
         let recipientData = null
         if (isDmail) {
           recipientData = await new Promise<any>(res => db.getUser(recipientEmail, res))
@@ -189,7 +193,8 @@ export const sendMailInBackground = async ({
             cid: att.cid,
             name: att.name || att.filename,
             type: att.type || att.contentType,
-            size: att.size
+            size: att.size,
+            data: att.data
           }))
 
           const response = await fetch(`${relayBase}/api/send-external`, {
@@ -209,7 +214,8 @@ export const sendMailInBackground = async ({
               bcc,
               attachments: attachmentPayload,
               mailId,
-              threadId
+              threadId,
+              parentMessageId
             })
           })
 
@@ -253,14 +259,25 @@ export const sendMailInBackground = async ({
 
       } catch (err: any) {
         console.error("❌ [BackgroundSend] Critical Failure:", err)
-        // Update the pending mail with error status
+        // Update the pending mail with error status.
+        // Store originalParams so the Outbox page can offer a reliable Retry.
         updateMailInStore(mailId, {
           status: "outbox",
           isPending: false,
           error: err?.message || "Failed to send",
-          subject: `⚠️ Failed: ${subject}`
+          subject: `⚠️ Failed: ${subject}`,
+          originalParams: {
+            recipientEmail,
+            subject,
+            message,
+            attachmentMeta: attachments.map(a => ({ name: a.name, size: a.size, type: a.type, cid: a.cid })),
+            cc,
+            bcc,
+            threadId: threadIdParam,
+          },
         })
       }
+
     })()
 
   return mailId

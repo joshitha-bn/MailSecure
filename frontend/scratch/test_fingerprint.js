@@ -4,7 +4,7 @@ async function testFingerprint() {
     const { privateKey, publicKey } = await openpgp.generateKey({
         type: 'ecc',
         curve: 'curve25519',
-        userIDs: [{ name: 'Test', email: 'test@dmail.com' }],
+        userIDs: [{ name: 'Test', email: 'test@etherxinnovations.in' }],
         passphrase: 'password'
     });
 

@@ -173,7 +173,7 @@ export default function ImportantPage() {
       </div>
 
       <div style={{ maxWidth: "860px" }}>
-        <h1 style={{ fontSize: "26px", fontFamily: "Cinzel, serif", color: "var(--text-bright)", marginBottom: "24px", letterSpacing: "1px", lineHeight: 1.3 }}>
+        <h1 style={{ fontSize: "26px", color: "var(--text-bright)", marginBottom: "24px", fontWeight: "700", lineHeight: 1.3 }}>
           {selectedMail.subject || "(No subject)"}
         </h1>
 
@@ -206,7 +206,7 @@ export default function ImportantPage() {
               <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
                 <Shield size={48} color="var(--gold-mid)" strokeWidth={1} />
                 <div>
-                  <h2 style={{ fontFamily: "Cinzel, serif", fontSize: "18px", color: "var(--text-bright)", marginBottom: "8px" }}>ENCRYPTED CONTENT</h2>
+                  <h2 style={{ fontSize: "18px", color: "var(--text-bright)", marginBottom: "8px", fontWeight: "700" }}>ENCRYPTED CONTENT</h2>
                   <p style={{ color: "var(--text-muted)", fontSize: "14px", lineHeight: 1.7 }}>
                     This message is end-to-end encrypted. Enter your DMail password to unlock.
                   </p>
@@ -239,7 +239,7 @@ export default function ImportantPage() {
       {showPassModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ animation: "fadeUp 0.3s ease" }}>
-            <h3 style={{ fontFamily: "Cinzel, serif", color: "var(--gold-mid)", marginBottom: "16px" }}>Verify Identity</h3>
+            <h3 style={{ color: "var(--gold-mid)", marginBottom: "16px", fontWeight: "700" }}>Verify Identity</h3>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "20px" }}>
               Enter your DMail account password to securely decrypt this message.
             </p>

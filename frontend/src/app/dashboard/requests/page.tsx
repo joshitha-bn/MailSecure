@@ -19,7 +19,7 @@ function RequestsPageContent() {
     }
 
     const updateMails = () => {
-      setMails(getMails("all"))
+      setMails(getMails("request"))
       setIsRefreshing(false)
     }
     updateMails()
@@ -41,7 +41,7 @@ function RequestsPageContent() {
     }
     const trustedEmails = new Set(contacts.map((c: any) => c.email?.toLowerCase()))
 
-    // 2. Filter for incoming mails from untrusted senders
+    // 2. Filter for incoming mails with status "request" from untrusted senders
     const incomingUntrusted = mails.filter(m => {
       const sender = m.senderEmail?.toLowerCase()
       const receiver = m.receiverEmail?.toLowerCase()
@@ -50,9 +50,10 @@ function RequestsPageContent() {
       const isFromSelf = sender === userEmail.toLowerCase()
       const isTrusted = trustedEmails.has(sender)
 
-      // We show them if they are incoming, not from ourselves, and not trusted
-      return isIncoming && !isFromSelf && !isTrusted
+      // We show them if they are incoming request mails, not from ourselves, and not trusted
+      return isIncoming && !isFromSelf && !isTrusted && m.status === "request"
     })
+
 
     // 3. Group by sender email to get unique list of senders
     const senderMap = new Map<string, { email: string; name: string; time: string; count: number }>()
@@ -114,7 +115,7 @@ function RequestsPageContent() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
           <div>
-            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-bright)", margin: 0, fontFamily: "Cinzel, serif" }}>
+            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>
               Connection Requests
             </h2>
             <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "4px" }}>

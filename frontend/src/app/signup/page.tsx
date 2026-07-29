@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Logo from "@/components/Logo"
 import { Eye, EyeOff, Lock, Mail, CheckCircle, Shield, Clipboard, ShieldCheck, ShieldAlert, ArrowLeft, ArrowRight } from "lucide-react"
+import { MAIL_DOMAIN } from "@/utils/config"
 
 // DYNAMIC IMPORTS to prevent 500 Internal Server Errors during SSR
 // We load heavy dependencies only when the user interacts or after hydration.
@@ -67,7 +68,7 @@ export default function Signup() {
       const { generateSovereignIdentity } = await import("@/utils/identity")
 
       const randomSuffix = Math.floor(1000 + Math.random() * 9000)
-      const generatedEmail = `${cleanName}${randomSuffix}@dmail.com`
+      const generatedEmail = `${cleanName}${randomSuffix}@${MAIL_DOMAIN}`
 
       // REAL CHECK
       const meshData = await new Promise<any>(res => {

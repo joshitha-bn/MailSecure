@@ -8,9 +8,9 @@ import { initMailStore, updateMailInStore, getAllRaw } from "@/utils/mailStore"
 import { initLabelSync } from "@/utils/labelStore"
 import { db } from "@/utils/gun"
 import { LabelProvider } from "@/context/LabelContext"
+import { ToastProvider } from "@/context/ToastContext"
 import RouteProgressBar from "@/components/RouteProgressBar"
 
-// 🚀 Lazy Load heavy components that aren't immediately critical
 const GunStatusBanner = dynamic(() => import("@/components/GunStatusBanner"), { ssr: false })
 const OfflineQueueProcessor = dynamic(() => import("@/components/offlineQueueProcessor"), { ssr: false })
 const ComposeWindow = dynamic(() => import("@/components/ComposeWindow"), { ssr: false })
@@ -184,39 +184,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   return (
-    <LabelProvider>
-      <RouteProgressBar />
-      <GunStatusBanner />
-      <div className="dashboard">
-        <Header
-          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-          onCompose={() => setShowCompose(true)}
-        />
-        <div className="dashboard-body">
-          <Sidebar
-            isOpen={isSidebarOpen}
+    <ToastProvider>
+      <LabelProvider>
+        <RouteProgressBar />
+        <GunStatusBanner />
+        <div className="dashboard">
+          <Header
+            onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
             onCompose={() => setShowCompose(true)}
           />
-          <main 
-            className="mail-area" 
-            key={pathname}
-            style={{ 
-              animation: "fadeIn 0.3s ease-out",
-              height: "100%", overflow: "hidden"
-            }}
-          >
-            <Suspense fallback={null}>
-              {children}
-            </Suspense>
-          </main>
+          <div className="dashboard-body">
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onCompose={() => setShowCompose(true)}
+            />
+            <main 
+              className="mail-area" 
+              key={pathname}
+              style={{ 
+                animation: "fadeIn 0.3s ease-out",
+                height: "100%", overflow: "hidden"
+              }}
+            >
+              <Suspense fallback={null}>
+                {children}
+              </Suspense>
+            </main>
+          </div>
+
+          <OfflineQueueProcessor />
+
+          {showCompose && (
+            <ComposeWindow onClose={() => setShowCompose(false)} />
+          )}
         </div>
-
-        <OfflineQueueProcessor />
-
-        {showCompose && (
-          <ComposeWindow onClose={() => setShowCompose(false)} />
-        )}
-      </div>
-    </LabelProvider>
+      </LabelProvider>
+    </ToastProvider>
   )
 }

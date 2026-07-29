@@ -15,6 +15,7 @@ import {
   type SavedAccount,
 } from "@/utils/accounts"
 import { loginWithPasskey } from "@/utils/webauthn"
+import { MAIL_DOMAIN } from "@/utils/config"
 
 function LoginForm() {
   const router = useRouter()
@@ -473,7 +474,7 @@ function LoginForm() {
         <div className="auth-form">
           <input
             type="email" className="auth-input"
-            placeholder="Email (e.g. name1234@dmail.com)"
+            placeholder={`Email (e.g. name1234@${MAIL_DOMAIN})`}
             value={email}
             onChange={(e) => { setEmail(e.target.value); setLoginMessage(null) }}
             onKeyDown={(e) => e.key === "Enter" && login()}

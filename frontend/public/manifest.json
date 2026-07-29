@@ -1,6 +1,6 @@
 {
-  "name": "DMail — Decentralized Email",
-  "short_name": "DMail",
+  "name": "EtherX DMail — Decentralized Email",
+  "short_name": "EtherX DMail",
   "description": "End-to-end encrypted decentralized email powered by GunDB and IPFS",
   "start_url": "/dashboard/inbox",
   "display": "standalone",

@@ -136,12 +136,13 @@ export const filterIncomingMail = async (
     }
   }
 
-  // ── Step 6: Unknown sender, low score → inbox ──
+  // ── Step 6: Unknown sender, low score → connection request ──
   return {
-    status:        "inbox",
+    status:        "request",
     flaggedReason: "Unknown sender",
     spamScore:     score,
   }
+
 }
 
 export const trustSender = (senderEmail: string, userEmail: string) => {

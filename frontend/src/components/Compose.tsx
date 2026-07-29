@@ -13,21 +13,27 @@ interface ComposeProps {
   onClose: () => void
   defaultTo?: string
   defaultCc?: string
+  defaultBcc?: string
   defaultSubject?: string
   defaultMessage?: string
+  defaultDraftId?: string
 }
 
-export default function Compose({ onClose, defaultTo, defaultCc, defaultSubject, defaultMessage }: ComposeProps) {
+export default function Compose({ onClose, defaultTo, defaultCc, defaultBcc, defaultSubject, defaultMessage, defaultDraftId }: ComposeProps) {
+  // Normalize each field independently — never pass To as excludeAddresses for CC
   const cleanTo = normalizeAndDedupeRecipients(defaultTo)
-  const cleanCc = normalizeAndDedupeRecipients(defaultCc, [cleanTo])
+  const cleanCc = normalizeAndDedupeRecipients(defaultCc)
+  const cleanBcc = normalizeAndDedupeRecipients(defaultBcc)
 
   return (
     <ComposeWindow
       onClose={onClose}
       defaultTo={cleanTo}
       defaultCc={cleanCc}
+      defaultBcc={cleanBcc}
       defaultSubject={defaultSubject}
       defaultMessage={defaultMessage}
+      defaultDraftId={defaultDraftId}
     />
   )
 }

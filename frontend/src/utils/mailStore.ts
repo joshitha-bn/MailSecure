@@ -1,6 +1,7 @@
 import { gun, db } from "@/utils/gun"
 import { cacheMail } from "@/utils/mailCache"
 import { filterIncomingMail } from "@/utils/spamFilter"
+import { MAIL_DOMAIN, MAIL_DOMAIN_ALIAS } from "@/utils/config"
 
 // 🚀 HIGH-PERFORMANCE DATA STRUCTURES
 let allMailsMap: Map<string, any> = new Map()
@@ -44,18 +45,33 @@ export const initMailStore = async (userEmail: string, force = false) => {
   currentEmail = userEmail
   isListening = true
 
-  console.log(`📥 [MailStore] Fresh init for ${userEmail} (force: ${force}) — loading from GunDB index only`)
+  console.log(`📥 [MailStore] Fresh init for ${userEmail} (force: ${force})`)
 
-  // 🎯 [Phase 6 Fix] Build inbox ONLY from the network index (user_mail_index via listenUserMails).
-  // Do NOT pre-load from IndexedDB cache — cache may be stale and will cause inconsistency.
-  // The GunDB listener fires almost immediately on a live connection.
+  // 🚀 Load local IndexedDB cached mails for instant rendering and offline support
+  try {
+    const { getCachedMails } = await import("@/utils/mailCache")
+    const cached = await getCachedMails(userEmail)
+    let addedCount = 0
+    cached.forEach((m: any) => {
+      if (m && m.id && !allMailsMap.has(m.id)) {
+        allMailsMap.set(m.id, { ...m, fromCache: true })
+        addedCount++
+      }
+    })
+    if (addedCount > 0) notify()
+  } catch (e) {
+    console.warn("Failed to load cached mails on init:", e)
+  }
+
+  // 🎯 Listen for live network index updates (user_mail_index via listenUserMails).
   db.listenUserMails(userEmail, async (mail: any) => {
+
     if (!mail || !mail.id) return
 
     const existing = allMailsMap.get(mail.id)
     const variants = [userEmail]
-    if (userEmail.endsWith("@dmail.com")) variants.push(userEmail.replace("@dmail.com", "@securemail.com"))
-    else if (userEmail.endsWith("@securemail.com")) variants.push(userEmail.replace("@securemail.com", "@dmail.com"))
+    if (userEmail.endsWith(`@${MAIL_DOMAIN}`)) variants.push(userEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+    else if (userEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(userEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
 
     const isNewIncoming =
       variants.includes(mail.receiverEmail?.toLowerCase()) &&
@@ -170,9 +186,14 @@ export const getMails = (status: string) => {
   const mails = getMailsArray()
   let result: any[] = []
 
-  const variants = [currentEmail]
-  if (currentEmail.endsWith("@dmail.com")) variants.push(currentEmail.replace("@dmail.com", "@securemail.com"))
-  else if (currentEmail.endsWith("@securemail.com")) variants.push(currentEmail.replace("@securemail.com", "@dmail.com"))
+  const cleanCurrent = currentEmail.trim().toLowerCase()
+  const variants = [cleanCurrent]
+  if (cleanCurrent.endsWith(`@${MAIL_DOMAIN}`)) variants.push(cleanCurrent.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+  else if (cleanCurrent.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(cleanCurrent.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
+  if (cleanCurrent.includes("@")) {
+    const userPrefix = cleanCurrent.split("@")[0]
+    variants.push(`${userPrefix}@dmail.com`)
+  }
 
   const isSender = (m: any) => m.senderEmail && variants.includes(m.senderEmail.toLowerCase())
   const isReceiver = (m: any) => m.receiverEmail && variants.includes(m.receiverEmail.toLowerCase())
@@ -180,7 +201,16 @@ export const getMails = (status: string) => {
   if (status === "starred") {
     result = mails.filter((m) => m.isStarred && m.status !== "trash" && m.status !== "purged" && m.senderStatus !== "deleted").sort(newestFirst)
   } else if (status === "sent") {
-    result = mails.filter((m) => isSender(m) && m.status !== "draft" && m.status !== "trash" && m.status !== "purged" && m.senderStatus !== "deleted").sort(newestFirst)
+    // Exclude outbox (failed) messages from the Sent view
+    // Force isRead: true — sender has always "read" their own sent mail
+    result = mails.filter((m) =>
+      isSender(m) &&
+      m.status !== "draft" &&
+      m.status !== "trash" &&
+      m.status !== "purged" &&
+      m.status !== "outbox" &&
+      m.senderStatus !== "deleted"
+    ).map((m) => ({ ...m, isRead: true })).sort(newestFirst)
   } else if (status === "queued") {
     result = mails.filter((m) => m.status === "queued").sort(newestFirst)
   } else if (status === "all") {
@@ -188,7 +218,9 @@ export const getMails = (status: string) => {
   } else if (status === "request") {
     result = mails.filter((m) => m.status === "request" && isReceiver(m)).sort(newestFirst)
   } else if (status === "inbox") {
-    result = mails.filter((m) => isReceiver(m) && (m.status === "inbox" || m.status === "outbox" || m.status === "request")).sort(newestFirst)
+    result = mails.filter((m) => isReceiver(m) && m.status === "inbox").sort(newestFirst)
+  } else if (status === "archive" || status === "archived") {
+    result = mails.filter((m) => (m.status === "archive" || m.status === "archived") && m.senderStatus !== "deleted").sort(newestFirst)
   } else {
     result = mails.filter((m) => m.status === status).sort(newestFirst)
   }
@@ -298,64 +330,68 @@ export const pinMailInStore = (id: string, isPinned: boolean) => {
 }
 
 export const getCounts = (email: string) => {
-  let counts = { inbox: 0, starred: 0, spam: 0, drafts: 0, request: 0, sent: 0, trash: 0, allUnread: 0 }
-  const lowerEmail = email.trim().toLowerCase()
-  
-  // Load trusted contacts to identify untrusted senders
-  const trustedEmails = new Set<string>()
-  if (typeof window !== "undefined") {
-    try {
-      const cached = localStorage.getItem(`contacts_${lowerEmail}`)
-      if (cached) {
-        const contacts = JSON.parse(cached)
-        contacts.forEach((c: any) => {
-          if (c.email) trustedEmails.add(c.email.toLowerCase())
-        })
-      }
-    } catch (e) {
-      console.warn(e)
-    }
+  let counts = {
+    inbox: 0,
+    inboxUnread: 0,
+    totalInbox: 0,
+    starred: 0,
+    spam: 0,
+    drafts: 0,
+    request: 0,
+    sent: 0,
+    outbox: 0,
+    trash: 0,
+    allUnread: 0
   }
-
-  const untrustedSendersSet = new Set<string>()
+  if (!email) return counts
+  const lowerEmail = email.trim().toLowerCase()
+  const variants = [lowerEmail]
+  if (lowerEmail.endsWith(`@${MAIL_DOMAIN}`)) variants.push(lowerEmail.replace(`@${MAIL_DOMAIN}`, `@${MAIL_DOMAIN_ALIAS}`))
+  else if (lowerEmail.endsWith(`@${MAIL_DOMAIN_ALIAS}`)) variants.push(lowerEmail.replace(`@${MAIL_DOMAIN_ALIAS}`, `@${MAIL_DOMAIN}`))
+  if (lowerEmail.includes("@")) {
+    const userPrefix = lowerEmail.split("@")[0]
+    variants.push(`${userPrefix}@dmail.com`)
+  }
 
   // Single pass over the Map values
   allMailsMap.forEach(m => {
     const receiver = m.receiverEmail?.trim().toLowerCase()
     const sender = m.senderEmail?.trim().toLowerCase()
 
+    const isRecv = receiver && variants.includes(receiver)
+    const isSend = sender && variants.includes(sender)
+    const status = m.status || "inbox"
+
     // 🛡️ [Global Starred Count]
-    // Starred mails include both sent and received, as long as they aren't deleted.
-    if (m.isStarred && m.status !== "trash" && m.status !== "purged" && m.senderStatus !== "deleted") {
+    if (m.isStarred && status !== "trash" && status !== "purged" && m.senderStatus !== "deleted") {
       counts.starred++
     }
 
-    if (receiver === lowerEmail) {
-      if ((m.status === "inbox" || m.status === "outbox" || m.status === "request") && !m.isRead) counts.inbox++
-      if (m.status === "spam") counts.spam++
-      if (m.status === "trash") counts.trash++
+    if (isRecv) {
+      if (status === "inbox") {
+        counts.totalInbox++
+        if (!m.isRead) counts.inboxUnread++
+      }
+      if (status === "request") counts.request++
+      if (status === "spam") counts.spam++
+      if (status === "trash") counts.trash++
 
-      // Count unread received messages for All Mail (excluding spam, trash, purged)
-      if (m.status !== "spam" && m.status !== "trash" && m.status !== "purged" && !m.isRead) {
+      if (status !== "spam" && status !== "trash" && status !== "purged" && !m.isRead) {
         counts.allUnread++
       }
-
-      // Check if it's from an untrusted sender (excluding spam, trash, purged and self)
-      if (sender && sender !== lowerEmail && !trustedEmails.has(sender) && m.status !== "trash" && m.status !== "purged" && m.status !== "spam") {
-        untrustedSendersSet.add(sender)
-      }
     }
-    if (sender === lowerEmail) {
-      if (m.status !== "draft" && m.status !== "purged" && m.status !== "trash") counts.sent++
-      if (m.status === "draft") counts.drafts++
+
+    if (isSend) {
+      if (status !== "draft" && status !== "purged" && status !== "trash" && status !== "outbox") counts.sent++;
+      if (status === "draft") counts.drafts++;
+      if (status === "outbox") counts.outbox++;
     }
   })
 
-  // Set the requests count to the number of unique untrusted senders
-  counts.request = untrustedSendersSet.size
-
+  counts.inbox = counts.inboxUnread
   return counts
 }
+
 
 export const clearStore = () => {
   allMailsMap.clear()

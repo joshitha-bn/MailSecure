@@ -272,7 +272,8 @@ app.post("/api/send-external", verifyUser, async (req, res) => {
     indexOutgoingMessage(messageId, mailId, threadId || mailId, senderEmail, subject, gun)
 
     // Also index under the SMTP-assigned messageId if different (Gmail may override our ID)
-    if (messageId && messageId !== `<${mailId}@dmail.com>`) {
+    const MAIL_DOMAIN = process.env.MAIL_DOMAIN || "etherxinnovations.in";
+    if (messageId && messageId !== `<${mailId}@${MAIL_DOMAIN}>`) {
       const altMapping = {
         dmailId: mailId,
         threadId: threadId || mailId,

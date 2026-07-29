@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { gun, db } from "@/utils/gun"
 import { copyToClipboard } from "@/utils/clipboard"
+import { initMailStore, getCounts, subscribe } from "@/utils/mailStore"
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
@@ -16,36 +17,28 @@ export default function ProfilePage() {
     if (!localUser.email) return
     setUser(localUser)
 
-    // Using global gun instance
-
-    // Collect all mails into an array first, then count
-    const collected: any[] = []
-
-    gun.get("securemail_mails").map().on((mail: any) => {
-      if (!mail || !mail.id || mail.status === "purged") return
-
-      // Update or add to collected
-      const idx = collected.findIndex((m) => m.id === mail.id)
-      if (idx >= 0) collected[idx] = mail
-      else collected.push(mail)
-
-      // Recount everything from collected array
-      let inbox = 0, sent = 0, spam = 0, starred = 0, trash = 0
-
-      collected.forEach((m) => {
-        if (m.receiverEmail === localUser.email) {
-          if (m.status === "inbox")  inbox++
-          if (m.status === "spam")   spam++
-          if (m.status === "trash")  trash++
-          if (m.isStarred)           starred++
-        }
-        if (m.senderEmail === localUser.email) sent++
+    const updateCounts = () => {
+      const c = getCounts(localUser.email)
+      setCounts({
+        inbox: c.totalInbox,
+        sent: c.sent,
+        spam: c.spam,
+        starred: c.starred,
+        trash: c.trash
       })
+    }
 
-      setCounts({ inbox, sent, spam, starred, trash })
+    updateCounts()
+    const unsub = subscribe(updateCounts)
+
+    initMailStore(localUser.email).then(() => {
+      updateCounts()
     })
 
+    return () => { unsub() }
   }, [])
+
+
 
   const copyPublicKey = () => {
     if (!user?.publicKey) return

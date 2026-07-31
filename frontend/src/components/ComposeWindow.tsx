@@ -5,11 +5,13 @@ import { db } from "@/utils/gun"
 import { isStorageReady } from "@/utils/web3storage"
 import { normalizeAndDedupeRecipients } from "@/utils/recipientUtils"
 import { isInternalDmailAddress } from "@/utils/config"
+import { getAllRaw } from "@/utils/mailStore"
 import {
   PenLine, Save, Minus, Maximize2, Minimize2, X,
   Check, WifiOff, AlertCircle, Send, Calendar,
   Paperclip, Archive, Clock, ShieldCheck, AlertTriangle, Link, Lock,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Bold, Italic, Underline, Strikethrough,
+  List, Type, Palette, UserCheck
 } from "lucide-react"
 
 type StatusType = "idle" | "sending" | "success" | "error"
@@ -35,7 +37,6 @@ interface ComposeWindowProps {
   defaultDraftId?: string
 }
 
-// Unique key generator to isolate inputs from each other in the browser DOM
 let composeInstanceCount = 0
 
 export default function ComposeWindow({
@@ -47,10 +48,8 @@ export default function ComposeWindow({
   defaultMessage = "",
   defaultDraftId,
 }: ComposeWindowProps) {
-  // Assign a stable instance ID so input IDs are unique across re-renders
   const instanceId = useRef(`cw_${++composeInstanceCount}`).current
 
-  // ── Independent recipient states — DO NOT share or derive from each other ──
   const [recipientEmail, setRecipientEmail] = useState<string>(() =>
     normalizeAndDedupeRecipients(defaultTo)
   )
@@ -62,6 +61,9 @@ export default function ComposeWindow({
   )
 
   const [isFocused, setIsFocused] = useState(false)
+  const [activeField, setActiveField] = useState<"to" | "cc" | "bcc" | null>(null)
+  const [contacts, setContacts] = useState<string[]>([])
+  const [filteredContacts, setFilteredContacts] = useState<string[]>([])
   const [showCcBcc, setShowCcBcc] = useState(!!(defaultCc || defaultBcc))
   const [subject, setSubject] = useState(defaultSubject)
   const [message, setMessage] = useState(defaultMessage)
@@ -79,13 +81,53 @@ export default function ComposeWindow({
   const [encryptionReady, setEncryptionReady] = useState<"checking" | "ready" | "no-key">("checking")
   const [storageReady, setStorageReady] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [showFormatBar, setShowFormatBar] = useState(true)
 
-  // Track current draftId — allows update-in-place
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const currentDraftId = useRef<string | null>(defaultDraftId || null)
-
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Encryption key check ──────────────────────────────────────────────────
+  // Extract unique contacts from past emails
+  useEffect(() => {
+    try {
+      const rawMails = getAllRaw()
+      const contactSet = new Set<string>()
+      rawMails.forEach((m) => {
+        if (m.senderEmail && m.senderEmail.includes("@")) contactSet.add(m.senderEmail.toLowerCase())
+        if (m.receiverEmail && m.receiverEmail.includes("@")) contactSet.add(m.receiverEmail.toLowerCase())
+      })
+      setContacts(Array.from(contactSet))
+    } catch (e) {
+      console.warn("Could not load contact history:", e)
+    }
+  }, [])
+
+  // Filter contacts based on current typing field
+  const handleRecipientChange = (val: string, field: "to" | "cc" | "bcc") => {
+    if (field === "to") setRecipientEmail(val)
+    else if (field === "cc") setCc(val)
+    else if (field === "bcc") setBcc(val)
+
+    setActiveField(field)
+
+    const query = val.split(",").pop()?.trim().toLowerCase() || ""
+    if (query.length > 0) {
+      const matches = contacts.filter((c) => c.toLowerCase().includes(query) && c.toLowerCase() !== val.toLowerCase())
+      setFilteredContacts(matches.slice(0, 5))
+    } else {
+      setFilteredContacts([])
+    }
+  }
+
+  const selectContact = (contact: string, field: "to" | "cc" | "bcc") => {
+    if (field === "to") setRecipientEmail(contact)
+    else if (field === "cc") setCc(contact)
+    else if (field === "bcc") setBcc(contact)
+    setFilteredContacts([])
+    setActiveField(null)
+  }
+
+  // Encryption key check
   useEffect(() => {
     const normalizedRecipient = recipientEmail.trim().toLowerCase()
     if (!normalizedRecipient || !normalizedRecipient.includes("@")) {
@@ -109,14 +151,13 @@ export default function ComposeWindow({
     isStorageReady().then(setStorageReady)
   }, [])
 
-  // ── Auto-save every 30s when there's content ─────────────────────────────
+  // Auto-save draft
   useEffect(() => {
     if (!subject && !message && !recipientEmail && !cc && !bcc) return
     const timer = setInterval(() => saveDraft(true), 30000)
     return () => clearInterval(timer)
   }, [recipientEmail, cc, bcc, subject, message, attachments])
 
-  // ── Draft persistence ─────────────────────────────────────────────────────
   const saveDraft = useCallback((auto = false) => {
     const user = JSON.parse(localStorage.getItem("user") || "{}")
     if (!user.email) return
@@ -139,11 +180,9 @@ export default function ComposeWindow({
       subject,
       message,
       savedAt,
-      // Store attachment metadata (names + sizes) — not binary data
       attachmentNames: attachments.map(a => ({ name: a.name, size: a.size, type: a.type, cid: a.cid })),
     }
 
-    // Update-in-place if we already have a draftId; otherwise prepend
     if (currentDraftId.current) {
       const idx = drafts.findIndex(d => d.id === currentDraftId.current)
       if (idx !== -1) {
@@ -152,7 +191,6 @@ export default function ComposeWindow({
         drafts.unshift(draft)
       }
     } else {
-      // New draft — assign the ID
       currentDraftId.current = draft.id
       drafts.unshift(draft)
     }
@@ -177,7 +215,24 @@ export default function ComposeWindow({
     localStorage.setItem(`drafts_${normalizedEmail}`, JSON.stringify(drafts))
   }
 
-  // ── File handling ──────────────────────────────────────────────────────────
+  // Formatting tool action handler for textarea selection
+  const applyFormatting = (prefix: string, suffix: string = "") => {
+    if (!textareaRef.current) return
+    const textarea = textareaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = message.substring(start, end)
+    const replacement = `${prefix}${selectedText}${suffix}`
+    const newMessage = message.substring(0, start) + replacement + message.substring(end)
+    setMessage(newMessage)
+
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length)
+    }, 10)
+  }
+
+  // File handling
   const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     files.forEach((file) => {
@@ -219,9 +274,8 @@ export default function ComposeWindow({
     setAttachments((prev) => prev.filter((a) => a.id !== id))
   }
 
-  // ── Send ──────────────────────────────────────────────────────────────────
   const sendMail = async () => {
-    if (isSending) return // Prevent double-send
+    if (isSending) return
     const userJson = localStorage.getItem("user")
     const user = userJson ? JSON.parse(userJson) : {}
 
@@ -239,11 +293,8 @@ export default function ComposeWindow({
 
     try {
       const { sendMailInBackground } = await import("@/utils/backgroundSend")
-
-      // Delete draft before sending to prevent orphaned drafts
       deleteDraftOnSend()
 
-      // 🔥 INSTANT DISPATCH: We don't wait for encryption/PoW/IPFS
       sendMailInBackground({
         user,
         recipientEmail: cleanTo,
@@ -256,7 +307,6 @@ export default function ComposeWindow({
         bcc: cleanBcc,
       })
 
-      // Close immediately
       onClose()
     } catch (err: any) {
       setIsSending(false)
@@ -265,7 +315,6 @@ export default function ComposeWindow({
     }
   }
 
-  // ── Minimized pill ──────────────────────────────────────────────────────────
   if (windowState === "minimized") {
     return (
       <div
@@ -305,7 +354,7 @@ export default function ComposeWindow({
         bottom: isMaximized ? "0" : "24px",
         right: isMaximized ? "0" : "24px",
         width: isMaximized ? "100vw" : "800px",
-        height: isMaximized ? "100vh" : "620px",
+        height: isMaximized ? "100vh" : "640px",
         background: "var(--bg-input)",
         borderTop: "3px solid var(--gold-mid)",
         borderRadius: isMaximized ? "0" : "10px",
@@ -317,7 +366,6 @@ export default function ComposeWindow({
         borderTopColor: "var(--gold-mid)",
       }}
     >
-
       {/* ── Header ── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -329,7 +377,6 @@ export default function ComposeWindow({
           <PenLine size={14} /> New Message
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {/* Encryption badge */}
           <div style={{
             background: encryptionReady === "ready"
               ? "rgba(34, 197, 94, 0.1)"
@@ -351,7 +398,6 @@ export default function ComposeWindow({
             </span>
           </div>
 
-          {/* Window controls */}
           <button
             onClick={() => setWindowState(windowState === "maximized" ? "open" : "maximized")}
             style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex", padding: "4px" }}
@@ -383,10 +429,9 @@ export default function ComposeWindow({
       </div>
 
       {/* ── Recipient Fields ── */}
-      <div style={{ borderBottom: "1px solid var(--border-color)", flexShrink: 0 }}>
-
+      <div style={{ borderBottom: "1px solid var(--border-color)", flexShrink: 0, position: "relative" }}>
         {/* TO row */}
-        <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)", position: "relative" }}>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-dim)", width: "52px", letterSpacing: "0.05em" }}>TO</span>
           <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
             {recipientEmail && recipientEmail.includes("@") && recipientEmail.split("@")[1]?.includes(".") && !isFocused ? (
@@ -415,17 +460,18 @@ export default function ComposeWindow({
                 id={`${instanceId}_to`}
                 name={`${instanceId}_to`}
                 type="text"
-                autoComplete="new-password"
-                data-form-type="other"
+                autoComplete="off"
                 spellCheck={false}
                 style={{ background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px", flex: 1, minWidth: "200px" }}
                 placeholder="recipient@example.com"
                 value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
+                onChange={(e) => handleRecipientChange(e.target.value, "to")}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => {
-                  setIsFocused(false)
-                  setRecipientEmail(prev => normalizeAndDedupeRecipients(prev))
+                  setTimeout(() => {
+                    setIsFocused(false)
+                    if (activeField === "to") setActiveField(null)
+                  }, 200)
                 }}
                 autoFocus={isFocused}
               />
@@ -444,41 +490,68 @@ export default function ComposeWindow({
         {/* CC row */}
         {showCcBcc && (
           <>
-            <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)", position: "relative" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-dim)", width: "52px", letterSpacing: "0.05em" }}>CC</span>
               <input
                 id={`${instanceId}_cc`}
                 name={`${instanceId}_cc`}
                 type="text"
-                autoComplete="new-password"
-                data-form-type="other"
+                autoComplete="off"
                 spellCheck={false}
                 style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px" }}
                 placeholder="cc@example.com"
                 value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                onBlur={() => setCc(prev => normalizeAndDedupeRecipients(prev))}
+                onChange={(e) => handleRecipientChange(e.target.value, "cc")}
+                onBlur={() => setTimeout(() => activeField === "cc" && setActiveField(null), 200)}
               />
             </div>
 
             {/* BCC row */}
-            <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border-color)", position: "relative" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-dim)", width: "52px", letterSpacing: "0.05em" }}>BCC</span>
               <input
                 id={`${instanceId}_bcc`}
                 name={`${instanceId}_bcc`}
                 type="text"
-                autoComplete="new-password"
-                data-form-type="other"
+                autoComplete="off"
                 spellCheck={false}
                 style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text-bright)", fontSize: "13px" }}
                 placeholder="bcc@example.com"
                 value={bcc}
-                onChange={(e) => setBcc(e.target.value)}
-                onBlur={() => setBcc(prev => normalizeAndDedupeRecipients(prev))}
+                onChange={(e) => handleRecipientChange(e.target.value, "bcc")}
+                onBlur={() => setTimeout(() => activeField === "bcc" && setActiveField(null), 200)}
               />
             </div>
           </>
+        )}
+
+        {/* Contact Autocomplete Suggestions Popup */}
+        {activeField && filteredContacts.length > 0 && (
+          <div style={{
+            position: "absolute",
+            top: activeField === "to" ? "42px" : activeField === "cc" ? "84px" : "126px",
+            left: "70px", zIndex: 1100,
+            background: "var(--bg-card)", border: "1px solid var(--gold-mid)",
+            borderRadius: "6px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            minWidth: "260px", overflow: "hidden"
+          }}>
+            {filteredContacts.map((contact) => (
+              <div
+                key={contact}
+                onMouseDown={() => selectContact(contact, activeField)}
+                style={{
+                  padding: "8px 14px", fontSize: "12px", color: "var(--text-bright)",
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: "8px",
+                  borderBottom: "1px solid var(--border-color)", transition: "background 0.15s"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(160,114,10,0.15)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+              >
+                <UserCheck size={13} color="var(--gold-mid)" />
+                {contact}
+              </div>
+            ))}
+          </div>
         )}
 
         {/* SUBJECT row */}
@@ -495,8 +568,65 @@ export default function ComposeWindow({
         </div>
       </div>
 
+      {/* ── Formatting Bar ── */}
+      {showFormatBar && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "4px",
+          padding: "6px 20px", background: "var(--bg-deep)",
+          borderBottom: "1px solid var(--border-color)", flexShrink: 0
+        }}>
+          <button
+            onClick={() => applyFormatting("<b>", "</b>")}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Bold"
+          >
+            <Bold size={13} />
+          </button>
+          <button
+            onClick={() => applyFormatting("<i>", "</i>")}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Italic"
+          >
+            <Italic size={13} />
+          </button>
+          <button
+            onClick={() => applyFormatting("<u>", "</u>")}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Underline"
+          >
+            <Underline size={13} />
+          </button>
+          <button
+            onClick={() => applyFormatting("<strike>", "</strike>")}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Strikethrough"
+          >
+            <Strikethrough size={13} />
+          </button>
+          <div style={{ width: "1px", height: "18px", background: "var(--border-color)", margin: "0 4px" }} />
+          <button
+            onClick={() => applyFormatting("\n• ")}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Bullet List"
+          >
+            <List size={13} />
+          </button>
+          <button
+            onClick={() => {
+              const url = prompt("Enter URL:")
+              if (url) applyFormatting(`<a href="${url}">`, "</a>")
+            }}
+            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            title="Insert Link"
+          >
+            <Link size={13} />
+          </button>
+        </div>
+      )}
+
       {/* ── Body ── */}
       <textarea
+        ref={textareaRef}
         style={{
           flex: 1, background: "none", border: "none", outline: "none",
           padding: "20px", fontSize: "14px", color: "var(--text-muted)",
@@ -570,6 +700,14 @@ export default function ComposeWindow({
       <div style={{ padding: "12px 20px", background: "var(--bg-compose-hdr)", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-color)" }}>
         <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
           <button
+            onClick={() => setShowFormatBar(!showFormatBar)}
+            style={{ width: "32px", height: "32px", background: showFormatBar ? "rgba(160,114,10,0.1)" : "none", border: `1px solid ${showFormatBar ? "var(--gold-mid)" : "var(--border-color)"}`, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showFormatBar ? "var(--gold-mid)" : "var(--text-dim)", transition: "all 0.15s" }}
+            title="Formatting Options"
+          >
+            <Type size={15} />
+          </button>
+
+          <button
             onClick={() => fileInputRef.current?.click()}
             style={{ width: "32px", height: "32px", background: "none", border: "1px solid var(--border-color)", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-dim)", transition: "all 0.15s" }}
             title="Attach Local File"
@@ -598,7 +736,6 @@ export default function ComposeWindow({
 
           <div style={{ width: "1px", height: "24px", background: "var(--border-color)", margin: "0 4px" }} />
 
-          {/* Save Draft button */}
           <button
             onClick={() => saveDraft(false)}
             style={{ height: "32px", padding: "0 12px", background: draftSaved ? "rgba(34,197,94,0.1)" : "none", border: `1px solid ${draftSaved ? "rgba(34,197,94,0.3)" : "var(--border-color)"}`, borderRadius: "6px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", color: draftSaved ? "#22c55e" : "var(--text-dim)", fontSize: "11px", fontWeight: "600", transition: "all 0.2s" }}
@@ -612,14 +749,12 @@ export default function ComposeWindow({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {/* Last saved indicator */}
           {draftLastSaved && !draftSaved && (
             <span style={{ fontSize: "10px", color: "var(--text-dim)", opacity: 0.7 }}>
               Saved {draftLastSaved}
             </span>
           )}
 
-          {/* Send button */}
           <button
             onClick={sendMail}
             disabled={isSending}
@@ -643,3 +778,4 @@ export default function ComposeWindow({
     </div>
   )
 }
+

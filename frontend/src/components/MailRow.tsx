@@ -1,6 +1,6 @@
 "use client"
 import { memo, useState } from "react"
-import { Lock, Star, Check, Paperclip, Archive, Trash2, Mail, MailOpen } from "lucide-react"
+import { Lock, Star, Check, Paperclip, Archive, Trash2, Mail, MailOpen, Clock } from "lucide-react"
 import { cleanMessage } from "@/utils/gun"
 import { updateMailInStore } from "@/utils/mailStore"
 import { useToast } from "@/context/ToastContext"
@@ -215,6 +215,30 @@ const MailRow = memo(({
           onClick={e => e.stopPropagation()}
           style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px", flexShrink: 0 }}
         >
+          {/* Snooze */}
+          <div style={{ position: "relative" }}>
+            <button
+              title="Snooze"
+              onClick={e => {
+                e.stopPropagation()
+                const tomorrow = new Date()
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                tomorrow.setHours(8, 0, 0, 0)
+                updateMailInStore(mail.id, { status: "snoozed", snoozeUntil: tomorrow.getTime() })
+                showToast({
+                  message: "Snoozed until tomorrow 8:00 AM",
+                  actionLabel: "Undo",
+                  onAction: () => updateMailInStore(mail.id, { status: "inbox", snoozeUntil: null })
+                })
+              }}
+              style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: "4px", padding: "5px", color: "var(--text-bright)", cursor: "pointer", display: "flex", alignItems: "center" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(212,175,55,0.2)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+            >
+              <Clock size={14} />
+            </button>
+          </div>
+
           {/* Archive */}
           <button
             title="Archive"

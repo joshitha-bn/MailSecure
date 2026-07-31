@@ -311,14 +311,22 @@ function DraftsPageContent() {
         borderRight: selectedDraft ? "1px solid var(--border-color)" : "none",
       }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Drafts</h2>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Edit3 size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Drafts</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Saved message drafts</p>
+              </div>
+            </div>
             <button
               onClick={() => { setIsRefreshing(true); loadDrafts(); setTimeout(() => setIsRefreshing(false), 800) }}
-              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: "4px", borderRadius: "6px" }}
+              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex", alignItems: "center", transition: "color 0.2s, transform 0.3s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.transform = "rotate(180deg)" }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.transform = "rotate(0deg)" }}
               title="Refresh"
             >
-              <RefreshCw size={16} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
+              <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
             </button>
           </div>
 

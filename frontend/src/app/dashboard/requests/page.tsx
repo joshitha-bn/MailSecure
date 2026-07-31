@@ -109,18 +109,17 @@ function RequestsPageContent() {
   }
 
   return (
-    <div style={{ height: "100%", background: "var(--bg-body)", overflowY: "auto", padding: "40px 24px" }}>
-      <div style={{ maxWidth: "680px", margin: "0 auto" }}>
+    <div style={{ height: "100%", background: "var(--bg-body)", overflowY: "auto", padding: "0" }}>
+      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 24px 40px" }}>
         
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-          <div>
-            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>
-              Connection Requests
-            </h2>
-            <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "4px" }}>
-              Senders who are not in your trusted contacts. All their emails land in your Inbox, but you can manage their trust status here.
-            </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <UserCheck size={24} color="var(--gold-mid)" />
+            <div>
+              <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Connection Requests</h1>
+              <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Incoming messages from new untrusted senders</p>
+            </div>
           </div>
           <button
             onClick={handleRefresh}

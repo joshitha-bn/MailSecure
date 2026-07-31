@@ -192,9 +192,23 @@ function TrashPageContent() {
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
       <div style={{ width: selectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto" }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>Trash</h2>
-            <button onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800) }} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}><RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} /></button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Trash2 size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Trash</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Deleted messages</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800) }}
+              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex", alignItems: "center", transition: "color 0.2s, transform 0.3s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.transform = "rotate(180deg)" }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.transform = "rotate(0deg)" }}
+              title="Refresh Trash"
+            >
+              <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
+            </button>
           </div>
           <div style={{ position: "relative", marginBottom: "16px" }}>
             <Search size={16} color="var(--text-dim)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />

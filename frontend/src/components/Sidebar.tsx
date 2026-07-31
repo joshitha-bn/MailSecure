@@ -3,12 +3,11 @@
 import {
   Inbox, Send, FileText, AlertTriangle, Trash2,
   Star, Mail, Archive, Users, Settings,
-  PenSquare, Database, LogOut, Tag, Plus, ChevronDown, Globe, UserPlus, Clock
+  Plus, ChevronDown, Database, LogOut, Tag, UserPlus, Clock
 } from "lucide-react"
 
 import { useEffect, useState, memo } from "react"
 import Link from "next/link"
-import Image from "next/image" // 1. Added Image import
 import { usePathname, useRouter } from "next/navigation"
 import { getCounts, subscribe } from "@/utils/mailStore"
 import { getLabels, subscribeLabelStore, type Label } from "@/utils/labelStore"
@@ -18,10 +17,11 @@ import Logo from "@/components/Logo"
 
 interface SidebarProps {
   isOpen: boolean
+  onClose?: () => void
   onCompose: () => void
 }
 
-function Sidebar({ isOpen, onCompose }: SidebarProps) {
+function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -50,7 +50,7 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
         setCounts(getCounts(user.email))
         setLabels(getLabels(user.email))
         throttleTimer = null
-      }, 500) // Update sidebar counts at most once every 500ms
+      }, 500)
     }
 
     const onStorage = () => {
@@ -63,8 +63,8 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
     const unsubLabel = subscribeLabelStore(throttledUpdate)
 
     return () => {
-      unsub();
-      unsubLabel();
+      unsub()
+      unsubLabel()
       if (throttleTimer) clearTimeout(throttleTimer)
       window.removeEventListener("storage", onStorage)
     }
@@ -75,282 +75,240 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
     window.location.href = "/login"
   }
 
+  const handleNavClick = () => {
+    if (onClose) onClose()
+  }
+
   const isActive = (segment: string) => pathname.includes(segment)
 
-  if (!isOpen) return null
-
-  return (
-    <>
-      <aside className="sidebar">
-        <div className="sidebar-top">
-
-          {/* Sidebar Branding Removed for a cleaner look */}
-          <div style={{ height: "12px" }} /> 
-          {/* ---------------------------------- */}
-
-          <div style={{ padding: "8px 16px 20px" }}>
-            <button onClick={onCompose} className="compose-btn" style={{ 
-              width: "100%", padding: "12px 24px", borderRadius: "16px",
-              boxShadow: "var(--shadow-deep)"
-            }}>
-              <Plus size={24} style={{ color: "var(--bg-body)" }} />
-              <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--bg-body)" }}>Compose</span>
-            </button>
-          </div>
-
-          <nav className="nav-menu">
-            <div className="nav-section-label">Mail</div>
-
-            {/* Inbox */}
-            <Link href="/dashboard/inbox" className={`menu-link ${isActive("inbox") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Inbox size={20} style={{ opacity: isActive("inbox") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Inbox</span>
-                {counts.inbox > 0 && (
-                  <span className="count-badge" style={{ 
-                    fontSize: "11px", fontWeight: "700",
-                    background: isActive("inbox") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
-                    color: isActive("inbox") ? "var(--bg-body)" : "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.inbox}</span>
-                )}
-              </div>
-            </Link>
-
-            {/* Starred */}
-            <Link href="/dashboard/starred" className={`menu-link ${isActive("starred") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Star size={20} style={{ opacity: isActive("starred") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Starred</span>
-                {counts.starred > 0 && (
-                  <span className="count-badge" style={{ 
-                    fontSize: "11px", fontWeight: "700",
-                    background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.starred}</span>
-                )}
-              </div>
-            </Link>
-
-            {/* Sent */}
-            <Link href="/dashboard/sent" className={`menu-link ${isActive("sent") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Send size={20} style={{ opacity: isActive("sent") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Sent</span>
-                {counts.sent > 0 && (
-                  <span className="count-badge" style={{ 
-                    fontSize: "11px", fontWeight: "700",
-                    background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.sent}</span>
-                )}
-              </div>
-            </Link>
-
-
-            {/* Drafts */}
-            <Link href="/dashboard/drafts" className={`menu-link ${isActive("drafts") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <FileText size={20} style={{ opacity: isActive("drafts") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Drafts</span>
-                {counts.drafts > 0 && (
-                  <span className="count-badge" style={{ 
-                    fontSize: "11px", fontWeight: "700",
-                    background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.drafts}</span>
-                )}
-              </div>
-            </Link>
-
-
-            {/* Outbox */}
-            <Link href="/dashboard/outbox" className={`menu-link ${isActive("outbox") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Clock size={20} style={{ opacity: isActive("outbox") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Outbox</span>
-                {counts.outbox > 0 && (
-                  <span className="count-badge" style={{
-                    fontSize: "11px",
-                    fontWeight: "700",
-                    background: isActive("outbox") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
-                    color: isActive("outbox") ? "var(--bg-body)" : "var(--gold-mid)",
-                    padding: "2px 8px",
-                    borderRadius: "10px"
-                  }}>{counts.outbox}</span>
-                )}
-              </div>
-            </Link>
-            {/* Requests */}
-            <Link href="/dashboard/requests" className={`menu-link ${isActive("requests") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <UserPlus size={20} style={{ opacity: isActive("requests") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Requests</span>
-                {counts.request > 0 && (
-                  <span className="count-badge" style={{
-                    fontSize: "11px", fontWeight: "700",
-                    background: "rgba(212, 175, 55, 0.15)", color: "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.request}</span>
-                )}
-              </div>
-            </Link>
-
-            {/* All Mail */}
-            <Link href="/dashboard/all-mail" className={`menu-link ${isActive("all-mail") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Mail size={20} style={{ opacity: isActive("all-mail") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>All Mail</span>
-                {counts.allUnread > 0 && (
-                  <span className="count-badge" style={{ 
-                    fontSize: "11px", fontWeight: "700",
-                    background: isActive("all-mail") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
-                    color: isActive("all-mail") ? "var(--bg-body)" : "var(--gold-mid)",
-                    padding: "2px 8px", borderRadius: "10px"
-                  }}>{counts.allUnread}</span>
-                )}
-              </div>
-            </Link>
-
-            {/* Archive */}
-            <Link href="/dashboard/archive" className={`menu-link ${isActive("archive") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Archive size={20} style={{ opacity: isActive("archive") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Archive</span>
-              </div>
-            </Link>
-
-            {/* Spam */}
-            <Link href="/dashboard/spam" className={`menu-link ${isActive("spam") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <AlertTriangle size={20} style={{ opacity: isActive("spam") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Spam</span>
-                {counts.spam > 0 && (
-                  <span className="count-badge" style={{
-                    background: "#d93025", color: "#fff",
-                    fontSize: "11px", padding: "2px 10px", borderRadius: "12px",
-                    fontWeight: "800", boxShadow: "0 2px 8px rgba(217, 48, 37, 0.3)"
-                  }}>
-                    {counts.spam}
-                  </span>
-                )}
-              </div>
-            </Link>
-
-            {/* Trash */}
-            <Link href="/dashboard/trash" className={`menu-link ${isActive("trash") ? "active" : ""}`}>
-              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Trash2 size={18} /> Trash
-              </span>
-            </Link>
-
-            <div className="nav-divider" />
-
-            {/* Labels Section Header */}
-            <div
-              className="nav-section-label"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                userSelect: "none",
-                marginTop: "10px"
-              }}
-              onClick={() => setLabelsOpen(!labelsOpen)}
-            >
-              <span>Labels</span>
-              <ChevronDown
-                size={12}
-                style={{
-                  transform: labelsOpen ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 0.2s ease",
-                  opacity: 0.7
-                }}
-              />
-            </div>
-
-            {labelsOpen && (
-              <>
-                {labels.map((label) => (
-                  <button
-                    key={label.id}
-                    onClick={() => setActiveLabelId(activeLabelId === label.id ? null : label.id)}
-                    className={`menu-link ${activeLabelId === label.id ? "active" : ""}`}
-                    style={{
-                      background: activeLabelId === label.id ? `${label.color}15` : "none",
-                      borderLeft: activeLabelId === label.id ? `3px solid ${label.color}` : "none",
-                      color: activeLabelId === label.id ? label.color : "var(--text-muted)",
-                    }}
-                  >
-                    <div className="link-content" style={{ width: "100%" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <Tag size={18} style={{ color: label.color }} />
-                        <span style={{ fontWeight: activeLabelId === label.id ? 600 : 400 }}>
-                          {label.name}
-                        </span>
-                      </span>
-                      {label.emoji && <span style={{ marginLeft: "auto", opacity: 0.8 }}>{label.emoji}</span>}
-                    </div>
-                  </button>
-                ))}
-
-                {labels.length === 0 && (
-                  <div style={{ padding: "4px 16px 8px", fontSize: "11px", color: "var(--text-dim)", fontStyle: "italic" }}>
-                    No labels yet
-                  </div>
-                )}
-
-                <Link
-                  href="/dashboard/settings#labels"
-                  style={{
-                    display: "flex", alignItems: "center", gap: "8px",
-                    padding: "5px 16px", fontSize: "11px",
-                    color: "var(--gold-mid)", textDecoration: "none",
-                    fontFamily: "Raleway, sans-serif", opacity: 0.8,
-                  }}
-                >
-                  <Plus size={11} /> Manage Labels
-                </Link>
-              </>
-            )}
-
-            <div className="nav-divider" />
-            <div className="nav-section-label">More</div>
-
-
-            {/* IPFS */}
-            <Link href="/dashboard/ipfs" className={`menu-link ${isActive("ipfs") ? "active" : ""}`}>
-              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Database size={18} /> IPFS Explorer
-              </span>
-            </Link>
-
-            {/* Contacts */}
-            <Link href="/dashboard/contacts" className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Users size={20} style={{ opacity: isActive("contacts") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Contacts</span>
-              </div>
-            </Link>
-
-            {/* Settings */}
-            <Link href="/dashboard/settings" className={`menu-link ${isActive("settings") ? "active" : ""}`}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                <Settings size={20} style={{ opacity: isActive("settings") ? 1 : 0.7 }} />
-                <span style={{ flex: 1, fontSize: "14px" }}>Settings</span>
-              </div>
-            </Link>
-          </nav>
-
+  const renderNavContent = () => (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+      <div>
+        <div style={{ padding: "8px 16px 20px" }}>
+          <button onClick={() => { onCompose(); if (onClose) onClose(); }} className="compose-btn" style={{ 
+            width: "100%", padding: "12px 24px", borderRadius: "16px",
+            boxShadow: "var(--shadow-deep)"
+          }}>
+            <Plus size={24} style={{ color: "var(--bg-body)" }} />
+            <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--bg-body)" }}>Compose</span>
+          </button>
         </div>
 
-        {/* Network status */}
+        <nav className="nav-menu">
+          <div className="nav-section-label">Mail</div>
+
+          <Link href="/dashboard/inbox" onClick={handleNavClick} className={`menu-link ${isActive("inbox") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Inbox size={20} style={{ opacity: isActive("inbox") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Inbox</span>
+              {counts.inbox > 0 && (
+                <span className="count-badge" style={{ 
+                  fontSize: "11px", fontWeight: "700",
+                  background: isActive("inbox") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
+                  color: isActive("inbox") ? "var(--bg-body)" : "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.inbox}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/starred" onClick={handleNavClick} className={`menu-link ${isActive("starred") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Star size={20} style={{ opacity: isActive("starred") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Starred</span>
+              {counts.starred > 0 && (
+                <span className="count-badge" style={{ 
+                  fontSize: "11px", fontWeight: "700",
+                  background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.starred}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/important" onClick={handleNavClick} className={`menu-link ${isActive("important") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <AlertTriangle size={20} style={{ opacity: isActive("important") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Important</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/sent" onClick={handleNavClick} className={`menu-link ${isActive("sent") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Send size={20} style={{ opacity: isActive("sent") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Sent</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/drafts" onClick={handleNavClick} className={`menu-link ${isActive("drafts") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <FileText size={20} style={{ opacity: isActive("drafts") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Drafts</span>
+              {counts.drafts > 0 && (
+                <span className="count-badge" style={{ 
+                  fontSize: "11px", fontWeight: "700",
+                  background: "rgba(212, 175, 55,0.1)", color: "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.drafts}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/outbox" onClick={handleNavClick} className={`menu-link ${isActive("outbox") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Clock size={20} style={{ opacity: isActive("outbox") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Outbox</span>
+              {counts.outbox > 0 && (
+                <span className="count-badge" style={{
+                  fontSize: "11px", fontWeight: "700",
+                  background: isActive("outbox") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
+                  color: isActive("outbox") ? "var(--bg-body)" : "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.outbox}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/requests" onClick={handleNavClick} className={`menu-link ${isActive("requests") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <UserPlus size={20} style={{ opacity: isActive("requests") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Requests</span>
+              {counts.request > 0 && (
+                <span className="count-badge" style={{
+                  fontSize: "11px", fontWeight: "700",
+                  background: "rgba(212, 175, 55, 0.15)", color: "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.request}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/all-mail" onClick={handleNavClick} className={`menu-link ${isActive("all-mail") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Mail size={20} style={{ opacity: isActive("all-mail") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>All Mail</span>
+              {counts.allUnread > 0 && (
+                <span className="count-badge" style={{ 
+                  fontSize: "11px", fontWeight: "700",
+                  background: isActive("all-mail") ? "var(--gold-mid)" : "rgba(212, 175, 55,0.1)",
+                  color: isActive("all-mail") ? "var(--bg-body)" : "var(--gold-mid)",
+                  padding: "2px 8px", borderRadius: "10px"
+                }}>{counts.allUnread}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/snoozed" onClick={handleNavClick} className={`menu-link ${isActive("snoozed") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Clock size={20} style={{ opacity: isActive("snoozed") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Snoozed</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/archive" onClick={handleNavClick} className={`menu-link ${isActive("archive") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Archive size={20} style={{ opacity: isActive("archive") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Archive</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/spam" onClick={handleNavClick} className={`menu-link ${isActive("spam") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <AlertTriangle size={20} style={{ opacity: isActive("spam") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Spam</span>
+              {counts.spam > 0 && (
+                <span className="count-badge" style={{
+                  background: "#d93025", color: "#fff",
+                  fontSize: "11px", padding: "2px 10px", borderRadius: "12px",
+                  fontWeight: "800"
+                }}>{counts.spam}</span>
+              )}
+            </div>
+          </Link>
+
+          <Link href="/dashboard/trash" onClick={handleNavClick} className={`menu-link ${isActive("trash") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Trash2 size={20} style={{ opacity: isActive("trash") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Trash</span>
+            </div>
+          </Link>
+
+          {/* Labels Section */}
+          <div
+            className="nav-section-label"
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none", marginTop: "16px" }}
+            onClick={() => setLabelsOpen(!labelsOpen)}
+          >
+            <span>Labels</span>
+            <ChevronDown size={12} style={{ transform: labelsOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s ease" }} />
+          </div>
+
+          {labelsOpen && (
+            <>
+              {labels.map((label) => (
+                <button
+                  key={label.id}
+                  onClick={() => { setActiveLabelId(activeLabelId === label.id ? null : label.id); handleNavClick(); }}
+                  className={`menu-link ${activeLabelId === label.id ? "active" : ""}`}
+                  style={{
+                    background: activeLabelId === label.id ? `${label.color}15` : "none",
+                    borderLeft: activeLabelId === label.id ? `3px solid ${label.color}` : "none",
+                    color: activeLabelId === label.id ? label.color : "var(--text-muted)",
+                  }}
+                >
+                  <div className="link-content" style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Tag size={18} style={{ color: label.color }} />
+                    <span style={{ fontWeight: activeLabelId === label.id ? 600 : 400, fontSize: "14px" }}>{label.name}</span>
+                    {label.emoji && <span style={{ marginLeft: "auto", opacity: 0.8 }}>{label.emoji}</span>}
+                  </div>
+                </button>
+              ))}
+
+              <Link
+                href="/dashboard/settings#labels"
+                onClick={handleNavClick}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  padding: "5px 16px", fontSize: "11px",
+                  color: "var(--gold-mid)", textDecoration: "none",
+                  fontFamily: "Raleway, sans-serif", opacity: 0.8,
+                }}
+              >
+                <Plus size={11} /> Manage Labels
+              </Link>
+            </>
+          )}
+
+          <div className="nav-section-label" style={{ marginTop: "24px" }}>More</div>
+
+          <Link href="/dashboard/ipfs" onClick={handleNavClick} className={`menu-link ${isActive("ipfs") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Database size={20} style={{ opacity: isActive("ipfs") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>IPFS Explorer</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/contacts" onClick={handleNavClick} className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Users size={20} style={{ opacity: isActive("contacts") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Contacts</span>
+            </div>
+          </Link>
+
+          <Link href="/dashboard/settings" onClick={handleNavClick} className={`menu-link ${isActive("settings") ? "active" : ""}`}>
+            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
+              <Settings size={20} style={{ opacity: isActive("settings") ? 1 : 0.7 }} />
+              <span style={{ flex: 1, fontSize: "14px" }}>Settings</span>
+            </div>
+          </Link>
+        </nav>
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: "16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
           <NetworkStatus />
         </div>
 
-        {/* User section */}
         <div className="sidebar-user">
           <div className="sidebar-avatar">
             {userName.charAt(0).toUpperCase()}
@@ -361,14 +319,42 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Logout */}
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" style={{ marginTop: "8px" }}>
           <button className="logout-btn" onClick={() => setShowLogoutModal(true)}>
             <LogOut size={18} />
             <span className="logout-text">Logout</span>
           </button>
         </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <aside className={`sidebar hide-on-mobile ${isOpen ? "" : "closed"}`}>
+        <div className="sidebar-top" style={{ height: "100%" }}>
+          {renderNavContent()}
+        </div>
       </aside>
+
+      {/* Mobile Gmail-style Slide Drawer */}
+      <div 
+        className={`mobile-drawer-overlay ${isOpen ? "open" : ""}`}
+        onClick={onClose}
+      >
+        <div className="mobile-drawer-content" onClick={e => e.stopPropagation()}>
+          <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-gold)" }}>
+            <Logo size={22} />
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "18px" }}>
+              ✕
+            </button>
+          </div>
+          <div style={{ padding: "12px 0", flex: 1, overflowY: "auto" }}>
+            {renderNavContent()}
+          </div>
+        </div>
+      </div>
 
       {/* Logout Modal */}
       {showLogoutModal && (
@@ -377,7 +363,7 @@ function Sidebar({ isOpen, onCompose }: SidebarProps) {
             <div style={{ fontSize: "32px", marginBottom: "16px" }}>🚪</div>
             <h3 style={{ marginBottom: "12px", fontSize: "20px", fontWeight: "700" }}>Sign Out?</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: 1.6 }}>
-              You are about to sign out of your current session. You credentials will remain saved in your vault.
+              You are about to sign out of your current session. Your credentials will remain saved in your vault.
             </p>
             <div className="modal-actions" style={{ display: "flex", gap: "12px" }}>
               <button className="btn-secondary" onClick={() => setShowLogoutModal(false)} style={{ flex: 1 }}>

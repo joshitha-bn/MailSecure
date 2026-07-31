@@ -11,6 +11,7 @@ import {
 } from "@/utils/contacts"
 import { copyToClipboard } from "@/utils/clipboard"
 import PageHeader from "@/components/PageHeader"
+import { Users } from "lucide-react"
 
 let contactsCache: Contact[] | null = null
 let cacheEmail = ""
@@ -205,6 +206,8 @@ export default function ContactsPage() {
     <>
       <PageHeader 
         title="Contacts"
+        subtitle="Manage your contact list and addresses"
+        icon={<Users size={24} />}
         count={contacts.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

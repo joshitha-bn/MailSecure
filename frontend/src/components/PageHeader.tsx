@@ -6,6 +6,8 @@ import { initMailStore } from "@/utils/mailStore"
 
 interface PageHeaderProps {
   title: string
+  subtitle?: string
+  icon?: React.ReactNode
   count?: number
   searchQuery: string
   onSearchChange: (value: string) => void
@@ -16,6 +18,8 @@ interface PageHeaderProps {
 
 export default function PageHeader({
   title,
+  subtitle,
+  icon,
   count,
   searchQuery,
   onSearchChange,
@@ -36,8 +40,58 @@ export default function PageHeader({
   }
 
   return (
-    <div style={{ padding: "16px 20px 0 20px", flexShrink: 0 }}>
-      {/* Search Bar Row (Standardized Placement) */}
+    <div style={{ padding: "24px 20px 0 20px", flexShrink: 0 }}>
+      {/* Header Row — unified design: icon + title + subtitle + actions */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {icon && (
+            <div style={{ color: "var(--gold-mid)", display: "flex", alignItems: "center" }}>
+              {icon}
+            </div>
+          )}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>
+                {title}
+              </h1>
+              {count !== undefined && count > 0 && (
+                <span style={{
+                  background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  padding: "2px 8px",
+                  borderRadius: "10px",
+                }}>
+                  {count}
+                </span>
+              )}
+            </div>
+            {subtitle && (
+              <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>{subtitle}</p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {rightElement && <div>{rightElement}</div>}
+          <button
+            onClick={handleSync}
+            title="Sync Global Network"
+            style={{
+              background: "none", border: "none", padding: "4px",
+              color: "var(--text-dim)", cursor: "pointer", display: "flex", alignItems: "center",
+              transition: "color 0.2s, transform 0.3s"
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.transform = "rotate(180deg)" }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.transform = "rotate(0deg)" }}
+          >
+            <RefreshCw size={16} style={{ animation: isSyncing ? "spin 1s linear infinite" : "none" }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
       {showSearch && (
         <div className="folder-search-container" style={{ marginBottom: "16px", maxWidth: "450px" }}>
           <Search size={16} className="folder-search-icon" />
@@ -66,41 +120,6 @@ export default function PageHeader({
           )}
         </div>
       )}
-
-      {/* Header Row (Title + Count + Extra Actions) */}
-      <div className="inbox-header-row" style={{ margin: 0, padding: "8px 0 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {title}
-            {count !== undefined && count > 0 && (
-              <span style={{
-                background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
-                color: "#fff",
-                fontSize: "11px",
-                fontWeight: "700",
-                padding: "2px 8px",
-                borderRadius: "10px",
-              }}>
-                {count}
-              </span>
-            )}
-            <button 
-              onClick={handleSync}
-              className="toolbar-btn"
-              title="Sync Global Network"
-              style={{ 
-                background: "none", border: "none", padding: "4px", 
-                marginLeft: "4px", color: "var(--gold-mid)",
-                animation: isSyncing ? "spin 1s linear infinite" : "none"
-              }}
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
-        </h2>
-        
-        {rightElement && <div>{rightElement}</div>}
-      </div>
     </div>
   )
 }

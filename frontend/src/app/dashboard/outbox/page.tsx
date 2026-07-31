@@ -94,21 +94,13 @@ export default function OutboxPage() {
       }}>
         {/* Header */}
         <div style={{ padding: "24px 24px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-            <div style={{
-              width: "36px", height: "36px", borderRadius: "10px",
-              background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
-              <AlertTriangle size={18} color="#ef4444" />
-            </div>
-            <div>
-              <h2 style={{ fontSize: "20px", fontWeight: "700", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>
-                Outbox
-              </h2>
-              <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0" }}>
-                {mails.length} failed {mails.length === 1 ? "message" : "messages"}
-              </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Send size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Outbox</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Messages queued for dispatch</p>
+              </div>
             </div>
           </div>
 

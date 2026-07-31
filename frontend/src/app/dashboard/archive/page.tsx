@@ -327,19 +327,28 @@ function ArchivePageContent() {
         transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto"
       }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>
-              {activeLabelId ? (userLabels.find(l => l.id === activeLabelId)?.name || "Archive") : "Archive"}
-            </h2>
-            {activeLabelId && (
-              <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/archive"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
-            )}
-            <button 
-              onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800) }}
-              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", marginLeft: "auto" }}
-            >
-              <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Archive size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Archive</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Archived messages</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {activeLabelId && (
+                <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/archive"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
+              )}
+              <button 
+                onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800) }}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex", alignItems: "center", transition: "color 0.2s, transform 0.3s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.transform = "rotate(180deg)" }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.transform = "rotate(0deg)" }}
+                title="Refresh Archive"
+              >
+                <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
+              </button>
+            </div>
           </div>
           
           <div style={{ position: "relative", marginBottom: "16px" }}>

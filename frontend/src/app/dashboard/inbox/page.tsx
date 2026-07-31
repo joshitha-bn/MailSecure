@@ -3,12 +3,13 @@
 import { useEffect, useState, useMemo, useRef, memo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { decryptMessage, encryptMessage, db, cleanMessage, decryptVaultKey, derivePGPPassphrase, validatePGPHeader, getOpenPGP } from "@/utils/gun"
-import { Star, MoreVertical, Archive, Trash2, Mail, Send, Reply, Forward, Shield, Lock, Bell, Settings, Search, ArrowLeft, Paperclip, Tag, Check, Eye, EyeOff, RefreshCw, Download } from "lucide-react"
-import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/mailStore"
+import { Star, MoreVertical, Archive, Trash2, Mail, Send, Reply, Forward, Shield, Lock, Bell, Settings, Search, ArrowLeft, Paperclip, Tag, Check, Eye, EyeOff, RefreshCw, Download, Inbox } from "lucide-react"
+import { subscribe, updateMailInStore, getMails, initMailStore, getAllRaw } from "@/utils/mailStore"
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailSkeleton from "@/components/MailSkeleton"
 import MailRow from "@/components/MailRow"
+import SearchFiltersPanel, { SearchFilters, emptyFilters, hasActiveFilters } from "@/components/SearchFiltersPanel"
 
 type Tab = "All" | "Unread" | "Starred"
 
@@ -35,6 +36,7 @@ function InboxPageContent() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
+  const [filters, setFilters] = useState<SearchFilters>({ ...emptyFilters(), query: urlSearch })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [inboxLayout, setInboxLayout] = useState("comfortable")
   const [emailPreview, setEmailPreview] = useState("2lines")
@@ -49,9 +51,9 @@ function InboxPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    const timer = setTimeout(() => setDebouncedSearch(filters.query), 300)
     return () => clearTimeout(timer)
-  }, [searchQuery])
+  }, [filters.query])
 
   const toggleSelection = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -67,7 +69,46 @@ function InboxPageContent() {
         if (activeTab === "Unread" && m.isRead) return false
         if (activeTab === "Starred" && !m.isStarred) return false
         if (activeLabelId && !getMailLabels(userEmail, m.id).includes(activeLabelId)) return false
-        
+
+        // Advanced filter: starred only
+        if (filters.starredOnly && !m.isStarred) return false
+
+        // Advanced filter: has attachment
+        if (filters.hasAttachment && !m.cid && !m.attachments?.length) return false
+
+        // Advanced filter: from sender
+        if (filters.from) {
+          const q = filters.from.toLowerCase()
+          if (!m.senderEmail?.toLowerCase().includes(q) && !m.senderName?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: to recipient
+        if (filters.to) {
+          const q = filters.to.toLowerCase()
+          if (!m.receiverEmail?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: subject
+        if (filters.subject) {
+          const q = filters.subject.toLowerCase()
+          if (!m.subject?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: date after
+        if (filters.dateAfter) {
+          const after = new Date(filters.dateAfter).getTime()
+          const mailTime = m.time ? new Date(m.time).getTime() : 0
+          if (mailTime < after) return false
+        }
+
+        // Advanced filter: date before
+        if (filters.dateBefore) {
+          const before = new Date(filters.dateBefore).getTime() + 86400000
+          const mailTime = m.time ? new Date(m.time).getTime() : 0
+          if (mailTime > before) return false
+        }
+
+        // Basic keyword search
         if (debouncedSearch) {
           const q = debouncedSearch.toLowerCase()
           return (
@@ -84,7 +125,7 @@ function InboxPageContent() {
         const getTime = (m: any) => m.time ? new Date(m.time).getTime() : 0
         return getTime(b) - getTime(a)
       })
-  }, [mails, activeTab, debouncedSearch, activeLabelId, userEmail])
+  }, [mails, activeTab, debouncedSearch, activeLabelId, userEmail, filters])
 
   const handleToggleSelectAll = () => {
     if (selectedIds.size > 0 && selectedIds.size === filteredMails.length) {
@@ -443,6 +484,13 @@ function InboxPageContent() {
     if (!mail) return null
     const isEncrypted = mail.message?.includes("-----BEGIN PGP MESSAGE-----")
 
+    // Find all thread messages matching normalized subject
+    const normalizeSub = (s: string) => (s || "").replace(/^((Re|Fwd):\s*)+/i, "").trim().toLowerCase()
+    const targetSub = normalizeSub(mail.subject)
+    const threadMails = getAllRaw()
+      .filter(m => normalizeSub(m.subject) === targetSub)
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+
     // Parse attachments if stored as JSON string
     let parsedAttachments: any[] = []
     if (mail.attachments) {
@@ -454,7 +502,7 @@ function InboxPageContent() {
     }
 
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
+      <div className="mail-detail-pane" style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
         {/* Header Navigation */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "28px" }}>
           <button
@@ -470,73 +518,91 @@ function InboxPageContent() {
           >
             <ArrowLeft size={17} />
           </button>
-          <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif", flex: 1, lineHeight: 1.3, letterSpacing: "-0.3px" }}>
-            {mail.subject || "(No subject)"}
-          </h1>
-        </div>
-
-        {/* Sender Card */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px",
-          padding: "16px 20px", borderRadius: "14px",
-          background: "rgba(255,255,255,0.03)", border: "1px solid #1a1a1a"
-        }}>
-          {/* Avatar */}
-          <div style={{
-            width: "46px", height: "46px", borderRadius: "50%", flexShrink: 0,
-            background: `linear-gradient(135deg, rgba(212,175,55,0.3) 0%, rgba(212,175,55,0.08) 100%)`,
-            border: "1.5px solid rgba(212,175,55,0.3)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "18px", fontWeight: "800", color: "var(--gold-mid)",
-            boxShadow: "0 0 20px rgba(212,175,55,0.1)"
-          }}>
-            {(mail.senderName || mail.senderEmail || "U").charAt(0).toUpperCase()}
-          </div>
-          {/* Name + address */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-bright)", fontFamily: "Inter, sans-serif" }}>
-                {mail.senderName || mail.senderEmail?.split("@")[0]}
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif", lineHeight: 1.3, letterSpacing: "-0.3px" }}>
+              {mail.subject || "(No subject)"}
+            </h1>
+            {threadMails.length > 1 && (
+              <span style={{ fontSize: "11px", color: "var(--gold-mid)", fontWeight: "700", marginTop: "4px", display: "inline-block" }}>
+                {threadMails.length} messages in conversation
               </span>
-              <span style={{ fontSize: "12px", color: "var(--text-dim)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
-                {mail.time && !isNaN(Date.parse(mail.time))
-                  ? new Date(mail.time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                  : mail.time}
-              </span>
-            </div>
-            <div style={{ fontSize: "12px", color: "var(--text-dim)", marginTop: "3px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ opacity: 0.7 }}>{mail.senderEmail}</span>
-              <span style={{ color: "var(--gold-mid)", opacity: 0.5 }}>→</span>
-              <span style={{ opacity: 0.7 }}>{mail.receiverEmail}</span>
-            </div>
-            {/* Labels display */}
-            {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
-                {userLabels.filter(l => getMailLabels(userEmail, mail.id).includes(l.id)).map(lbl => (
-                  <span key={lbl.id} style={{
-                    fontSize: "9px", padding: "2px 7px", borderRadius: "4px",
-                    background: `${lbl.color}22`, color: lbl.color, border: `1px solid ${lbl.color}44`,
-                    fontWeight: "700", textTransform: "uppercase"
-                  }}>{lbl.emoji && <span>{lbl.emoji} </span>}{lbl.name}</span>
-                ))}
-              </div>
             )}
           </div>
         </div>
 
-        {/* Security Badge */}
-        <div style={{
-          background: "rgba(212, 175, 55, 0.04)", border: "1px solid rgba(212, 175, 55, 0.12)",
-          borderRadius: "8px", padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px",
-          marginBottom: "24px"
-        }}>
-          <Lock size={13} color="var(--gold-mid)" />
-          <span style={{ fontSize: "11px", color: "rgba(212,175,55,0.6)", fontFamily: "monospace", flex: 1, letterSpacing: "0.05em" }}>
-            {mail.id?.slice(0, 20)}...
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--gold-mid)", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            {decryptedContent ? "✓ Decrypted" : (isEncrypted ? "✓ Encrypted" : "✓ Verified")}
-          </span>
+        {/* Conversation Thread Messages */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "24px" }}>
+          {threadMails.map((tMail, tIdx) => {
+            const isCurrent = tMail.id === mail.id
+            return (
+              <div
+                key={tMail.id || tIdx}
+                onClick={() => setSelectedMail(tMail)}
+                style={{
+                  borderRadius: "14px",
+                  background: isCurrent ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.015)",
+                  border: isCurrent ? "1px solid var(--gold-mid)" : "1px solid #1a1a1a",
+                  padding: "16px 20px", cursor: isCurrent ? "default" : "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {/* Sender Header */}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: isCurrent ? "16px" : "0" }}>
+                  <div style={{
+                    width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0,
+                    background: `linear-gradient(135deg, rgba(212,175,55,0.3) 0%, rgba(212,175,55,0.08) 100%)`,
+                    border: "1px solid rgba(212,175,55,0.3)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "14px", fontWeight: "800", color: "var(--gold-mid)"
+                  }}>
+                    {(tMail.senderName || tMail.senderEmail || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-bright)" }}>
+                        {tMail.senderName || tMail.senderEmail?.split("@")[0]}
+                      </span>
+                      <span style={{ fontSize: "11px", color: "var(--text-dim)" }}>
+                        {tMail.time && !isNaN(Date.parse(tMail.time))
+                          ? new Date(tMail.time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                          : tMail.time}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "var(--text-dim)" }}>{tMail.senderEmail}</span>
+                  </div>
+                </div>
+
+                {/* Collapsed Snippet or Expanded Message */}
+                {!isCurrent ? (
+                  <div style={{ fontSize: "13px", color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "4px" }}>
+                    {tMail.message?.slice(0, 100)}...
+                  </div>
+                ) : (
+                  <div>
+                    {/* Security Badge */}
+                    <div style={{
+                      background: "rgba(212, 175, 55, 0.04)", border: "1px solid rgba(212, 175, 55, 0.12)",
+                      borderRadius: "8px", padding: "8px 14px", display: "flex", alignItems: "center", gap: "8px",
+                      marginBottom: "16px"
+                    }}>
+                      <Lock size={12} color="var(--gold-mid)" />
+                      <span style={{ fontSize: "10px", color: "rgba(212,175,55,0.6)", fontFamily: "monospace", flex: 1 }}>
+                        {tMail.id?.slice(0, 20)}...
+                      </span>
+                      <span style={{ fontSize: "10px", color: "var(--gold-mid)", fontWeight: "700", textTransform: "uppercase" }}>
+                        {decryptedContent ? "✓ Decrypted" : (isEncrypted ? "✓ Encrypted" : "✓ Verified")}
+                      </span>
+                    </div>
+
+                    {/* Message Body */}
+                    <div style={{ color: "var(--text-bright)", fontSize: "14px", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                      {decryptedContent || tMail.message}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Action Buttons */}
@@ -885,59 +951,71 @@ function InboxPageContent() {
 
   return (
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
-      <div style={{ 
-        width: currentSelectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
-        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: currentSelectedMail ? "360px" : "1200px", margin: currentSelectedMail ? "0" : "0 auto",
-        willChange: "width"
-      }}>
+      <div 
+        className={`mail-list-pane ${currentSelectedMail ? "has-selected" : ""}`}
+        style={{ 
+          width: currentSelectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
+          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: currentSelectedMail ? "360px" : "1200px", margin: currentSelectedMail ? "0" : "0 auto",
+          willChange: "width"
+        }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>
-              {activeLabelId ? (userLabels.find(l => l.id === activeLabelId)?.name || "Label") : "Inbox"}
-            </h2>
-            {activeLabelId && (
-              <button 
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Inbox size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>
+                  {activeLabelId ? (userLabels.find(l => l.id === activeLabelId)?.name || "Label") : "Inbox"}
+                </h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Manage your incoming secure messages</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {activeLabelId && (
+                <button 
+                  onClick={() => {
+                    setActiveLabelId(null)
+                    router.push("/dashboard/inbox")
+                  }}
+                  style={{ 
+                    background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", 
+                    borderRadius: "4px", padding: "4px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" 
+                  }}
+                >
+                  Clear Filter
+                </button>
+              )}
+              <button
                 onClick={() => {
-                  setActiveLabelId(null)
-                  router.push("/dashboard/inbox")
+                  setLoading(true)
+                  initMailStore(userEmail, true)
+                  setTimeout(() => setLoading(false), 800)
                 }}
-                style={{ 
-                  background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", 
-                  borderRadius: "4px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" 
+                style={{
+                  background: "none", border: "none", color: "var(--text-dim)",
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  transition: "color 0.2s, transform 0.3s"
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--gold-mid)"
+                  e.currentTarget.style.transform = "rotate(180deg)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-dim)"
+                  e.currentTarget.style.transform = "rotate(0deg)"
+                }}
+                title="Refresh Inbox"
               >
-                Clear Filter
+                <RefreshCw size={18} />
               </button>
-            )}
-            <button
-              onClick={() => {
-                setLoading(true)
-                initMailStore(userEmail, true)
-                setTimeout(() => setLoading(false), 800)
-              }}
-              style={{
-                background: "none", border: "none", color: "var(--text-dim)",
-                cursor: "pointer", display: "flex", alignItems: "center",
-                transition: "color 0.2s, transform 0.3s"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--gold-mid)"
-                e.currentTarget.style.transform = "rotate(180deg)"
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--text-dim)"
-                e.currentTarget.style.transform = "rotate(0deg)"
-              }}
-              title="Refresh Inbox"
-            >
-              <RefreshCw size={18} />
-            </button>
+            </div>
           </div>
           
-          <div style={{ position: "relative", marginBottom: "16px" }}>
-            <Search size={16} color="var(--text-dim)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-            <input type="text" placeholder="Search mail..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: "100%", background: "var(--bg-card)", border: "1px solid #141414", borderRadius: "10px", padding: "10px 12px 10px 40px", color: "var(--text-bright)", fontSize: "13px", outline: "none" }} />
-          </div>
+          <SearchFiltersPanel
+            filters={filters}
+            onChange={setFilters}
+            onClear={() => setFilters(emptyFilters())}
+            placeholder="Search mail..."
+          />
 
           <div style={{ display: "flex", gap: "4px", background: "var(--bg-card)", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
             {(["All", "Unread", "Starred"] as Tab[]).map(tab => (
@@ -949,7 +1027,8 @@ function InboxPageContent() {
         <div style={{ 
           display: "flex", alignItems: "center", gap: "16px",
           padding: "12px 24px", borderBottom: "1px solid #141414",
-          background: "rgba(255,255,255,0.02)"
+          background: selectedIds.size > 0 ? "rgba(212, 175, 55, 0.04)" : "rgba(255,255,255,0.02)",
+          transition: "background 0.2s"
         }}>
           <button 
             onClick={handleToggleSelectAll}
@@ -972,9 +1051,43 @@ function InboxPageContent() {
           </button>
 
           {selectedIds.size > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginLeft: "auto" }}>
-              <span style={{ fontSize: "12px", color: "var(--gold-mid)", fontWeight: "600" }}>{selectedIds.size} selected</span>
-              <button onClick={handleBulkTrash} style={{ background: "rgba(232, 66, 52, 0.1)", color: "#e84234", border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+              <span style={{ fontSize: "12px", color: "var(--gold-mid)", fontWeight: "700", marginRight: "4px" }}>
+                {selectedIds.size} selected
+              </span>
+
+              {/* Archive batch */}
+              <button
+                onClick={() => {
+                  selectedIds.forEach(id => updateMailInStore(id, { status: "archive" }))
+                  setSelectedIds(new Set())
+                }}
+                style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-bright)", border: "1px solid #222", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                title="Archive Selected"
+              >
+                <Archive size={14} /> Archive
+              </button>
+
+              {/* Mark Read/Unread batch */}
+              <button
+                onClick={() => {
+                  const mailsToUpdate = mails.filter(m => selectedIds.has(m.id))
+                  const allRead = mailsToUpdate.every(m => m.isRead)
+                  selectedIds.forEach(id => updateMailInStore(id, { isRead: !allRead }))
+                  setSelectedIds(new Set())
+                }}
+                style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-bright)", border: "1px solid #222", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                title="Toggle Read/Unread"
+              >
+                <Mail size={14} /> Read/Unread
+              </button>
+
+              {/* Delete batch */}
+              <button
+                onClick={handleBulkTrash}
+                style={{ background: "rgba(232, 66, 52, 0.1)", color: "#e84234", border: "1px solid rgba(232, 66, 52, 0.2)", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                title="Delete Selected"
+              >
                 <Trash2 size={14} /> Delete
               </button>
             </div>

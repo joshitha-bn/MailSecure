@@ -438,6 +438,15 @@ export default function SettingsPage() {
       {/* ── Content ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
 
+        {/* ── Unified Page Header ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "20px", borderBottom: "1px solid var(--border-color)" }}>
+          <Settings size={24} color="var(--gold-mid)" />
+          <div>
+            <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Settings</h1>
+            <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Configure your account and platform preferences</p>
+          </div>
+        </div>
+
         {/* ══ GENERAL ══════════════════════════════════════════ */}
         {activeSection === "general" && (
           <>

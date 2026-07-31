@@ -236,6 +236,8 @@ export default function IPFSExplorerPage() {
     <div style={{ height: "100%", overflowY: "auto", paddingRight: "8px", scrollbarWidth: "thin", scrollbarColor: "var(--gold-mid) transparent" }}>
       <PageHeader 
         title="IPFS Explorer"
+        subtitle="Browse decentralized IPFS attachments and network CIDs"
+        icon={<Database size={24} />}
         count={mails.length}
         searchQuery={activeTab === "cids" ? searchCid : ""}
         onSearchChange={setSearchCid}

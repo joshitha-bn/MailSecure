@@ -11,7 +11,7 @@ import { getSavedAccounts, getAvatarColor } from "@/utils/accounts"
 
 import {
   Bell, Sun, Moon, RefreshCw,
-  PenSquare, Search, Menu, X
+  PenSquare, Search, Menu, X, Settings
 } from "lucide-react"
 
 interface HeaderProps {
@@ -44,6 +44,7 @@ function Header({ onToggle, onCompose }: HeaderProps) {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [nodeStatus, setNodeStatus] = useState<"active" | "connecting">("active")
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [accountCount, setAccountCount] = useState(0)
 
   const searchRef = useRef<HTMLDivElement>(null)
@@ -135,9 +136,20 @@ function Header({ onToggle, onCompose }: HeaderProps) {
   }
 
   return (
-    <header className="header" style={{ height: "72px", borderBottom: "1px solid var(--border-gold)", padding: "0 24px" }}>
-      <div className="header-left" style={{ minWidth: "200px" }}>
-        <Logo size={28} />
+    <header className="header" style={{ height: "64px", borderBottom: "1px solid var(--border-gold)", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="header-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <button
+          onClick={onToggle}
+          style={{
+            background: "none", border: "none", color: "var(--gold-mid)",
+            cursor: "pointer", padding: "8px", borderRadius: "8px",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}
+          title="Toggle Navigation Menu"
+        >
+          <Menu size={22} />
+        </button>
+        <Logo size={24} />
       </div>
 
       <div className="header-middle" style={{ flex: 1, display: "flex", justifyContent: "center", position: "relative" }}>
@@ -252,6 +264,133 @@ function Header({ onToggle, onCompose }: HeaderProps) {
             </span>
           </div>
         </button>
+
+        {/* Keyboard Shortcuts Cheat Sheet Button */}
+        <button
+          className="header-icon-btn"
+          onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }))}
+          style={{
+            background: "rgba(255, 255, 255, 0.04)",
+            border: "1px solid rgba(255, 255, 255, 0.02)",
+            cursor: "pointer",
+            color: "var(--text-muted)",
+            width: "36px", height: "36px", borderRadius: "10px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.2s ease"
+          }}
+          title="Keyboard Shortcuts (?)"
+          onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+          onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)")}
+        >
+          <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--gold-mid)" }}>?</span>
+        </button>
+
+        {/* Quick Settings Button */}
+        <div style={{ position: "relative" }}>
+          <button 
+            className="header-icon-btn"
+            onClick={() => setShowSettings(!showSettings)}
+            style={{ 
+              background: showSettings ? "rgba(212,175,55,0.15)" : "rgba(255, 255, 255, 0.04)", 
+              border: `1px solid ${showSettings ? "var(--gold-mid)" : "rgba(255, 255, 255, 0.02)"}`, 
+              cursor: "pointer", 
+              color: showSettings ? "var(--gold-mid)" : "var(--text-muted)",
+              width: "36px", height: "36px", borderRadius: "10px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.2s ease"
+            }}
+            title="Quick Settings"
+          >
+            <Settings size={16} />
+          </button>
+
+          {/* Quick Settings Dropdown Panel */}
+          {showSettings && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 12px)", right: 0,
+              width: "280px", background: "var(--bg-card)", border: "1px solid var(--gold-mid)",
+              borderRadius: "12px", padding: "16px", zIndex: 1200,
+              boxShadow: "0 12px 36px rgba(0,0,0,0.6)", fontFamily: "Inter, sans-serif"
+            }}>
+              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--gold-mid)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Settings size={14} /> Quick Settings
+              </div>
+
+              {/* Display Density */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
+                  Display Density
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {[
+                    { id: "compact", label: "Compact (Dense list)" },
+                    { id: "comfortable", label: "Comfortable (Standard)" },
+                    { id: "spacious", label: "Spacious (Large cards)" },
+                  ].map((d) => {
+                    const currentDensity = localStorage.getItem("settings_inboxLayout") || "comfortable"
+                    const active = currentDensity === d.id
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => {
+                          localStorage.setItem("settings_inboxLayout", d.id)
+                          window.dispatchEvent(new Event("storage"))
+                          setShowSettings(false)
+                        }}
+                        style={{
+                          textAlign: "left", padding: "8px 12px", borderRadius: "6px",
+                          fontSize: "12px", border: "1px solid var(--border-color)",
+                          background: active ? "rgba(160, 114, 10, 0.15)" : "transparent",
+                          color: active ? "var(--gold-mid)" : "var(--text-bright)",
+                          cursor: "pointer", fontWeight: active ? "700" : "500",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        {d.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Snippet Preview */}
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
+                  Message Snippets
+                </label>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  {[
+                    { id: "2lines", label: "Show" },
+                    { id: "none", label: "Hide" },
+                  ].map((p) => {
+                    const currentPreview = localStorage.getItem("settings_emailPreview") || "2lines"
+                    const active = currentPreview === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          localStorage.setItem("settings_emailPreview", p.id)
+                          window.dispatchEvent(new Event("storage"))
+                          setShowSettings(false)
+                        }}
+                        style={{
+                          flex: 1, padding: "6px", borderRadius: "6px",
+                          fontSize: "12px", border: "1px solid var(--border-color)",
+                          background: active ? "rgba(160, 114, 10, 0.15)" : "transparent",
+                          color: active ? "var(--gold-mid)" : "var(--text-bright)",
+                          cursor: "pointer", fontWeight: active ? "700" : "500",
+                          textAlign: "center"
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         <button 
           className="header-icon-btn"

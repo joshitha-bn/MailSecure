@@ -8,6 +8,7 @@ import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/m
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import SearchFiltersPanel, { SearchFilters, emptyFilters } from "@/components/SearchFiltersPanel"
 
 function SentPageContent() {
   const router = useRouter()
@@ -19,6 +20,7 @@ function SentPageContent() {
   const [selectedMail, setSelectedMail] = useState<any>(null)
   const [userEmail, setUserEmail] = useState("")
   const [searchQuery, setSearchQuery] = useState(urlSearch)
+  const [filters, setFilters] = useState<SearchFilters>({ ...emptyFilters(), query: urlSearch })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [userLabels, setUserLabels] = useState<Label[]>([])
@@ -26,9 +28,9 @@ function SentPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    const timer = setTimeout(() => setDebouncedSearch(filters.query), 300)
     return () => clearTimeout(timer)
-  }, [searchQuery])
+  }, [filters.query])
 
   useEffect(() => {
     if (urlSearch) setSearchQuery(urlSearch)
@@ -126,7 +128,7 @@ function SentPageContent() {
     if (!mail) return null
 
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
+      <div className="mail-detail-pane" style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "28px" }}>
           <button
@@ -261,46 +263,58 @@ function SentPageContent() {
 
   return (
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
-      <div style={{ 
-        width: currentSelectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
-        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: currentSelectedMail ? "360px" : "1200px", margin: currentSelectedMail ? "0" : "0 auto",
-        willChange: "width"
-      }}>
+      <div 
+        className={`mail-list-pane ${currentSelectedMail ? "has-selected" : ""}`}
+        style={{ 
+          width: currentSelectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
+          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: currentSelectedMail ? "360px" : "1200px", margin: currentSelectedMail ? "0" : "0 auto",
+          willChange: "width"
+        }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>Sent</h2>
-            {activeLabelId && (
-              <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/sent"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
-            )}
-            <button 
-              onClick={() => { 
-                setIsRefreshing(true); 
-                initMailStore(userEmail, true);
-                setTimeout(() => setIsRefreshing(false), 800);
-              }} 
-              style={{ 
-                background: "none", border: "none", color: "var(--text-dim)", 
-                cursor: "pointer", display: "flex", alignItems: "center",
-                transition: "color 0.2s, transform 0.3s", marginLeft: "auto" 
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--gold-mid)"
-                e.currentTarget.style.transform = "rotate(180deg)"
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--text-dim)"
-                e.currentTarget.style.transform = "rotate(0deg)"
-              }}
-              title="Refresh Sent Mail"
-            >
-              <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Send size={24} color="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Sent</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Messages sent to recipients</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {activeLabelId && (
+                <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/sent"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
+              )}
+              <button 
+                onClick={() => { 
+                  setIsRefreshing(true); 
+                  initMailStore(userEmail, true);
+                  setTimeout(() => setIsRefreshing(false), 800);
+                }} 
+                style={{ 
+                  background: "none", border: "none", color: "var(--text-dim)", 
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  transition: "color 0.2s, transform 0.3s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--gold-mid)"
+                  e.currentTarget.style.transform = "rotate(180deg)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-dim)"
+                  e.currentTarget.style.transform = "rotate(0deg)"
+                }}
+                title="Refresh Sent Mail"
+              >
+                <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
+              </button>
+            </div>
           </div>
           
-          <div style={{ position: "relative", marginBottom: "16px" }}>
-            <Search size={16} color="var(--text-dim)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-            <input type="text" placeholder="Search sent mail..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: "100%", background: "var(--bg-card)", border: "1px solid #141414", borderRadius: "10px", padding: "10px 12px 10px 40px", color: "var(--text-bright)", fontSize: "13px", outline: "none" }} />
-          </div>
+          <SearchFiltersPanel
+            filters={filters}
+            onChange={setFilters}
+            onClear={() => setFilters(emptyFilters())}
+            placeholder="Search sent mail..."
+          />
         </div>
 
         <div style={{ 

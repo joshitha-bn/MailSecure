@@ -14,12 +14,46 @@ import RouteProgressBar from "@/components/RouteProgressBar"
 const GunStatusBanner = dynamic(() => import("@/components/GunStatusBanner"), { ssr: false })
 const OfflineQueueProcessor = dynamic(() => import("@/components/offlineQueueProcessor"), { ssr: false })
 const ComposeWindow = dynamic(() => import("@/components/ComposeWindow"), { ssr: false })
+const KeyboardShortcutsModal = dynamic(() => import("@/components/KeyboardShortcutsModal"), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [showCompose, setShowCompose] = useState(false)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   const pathname = usePathname()
   const isInitialized = useRef(false)
+
+  // Global Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input/textarea
+      const activeTag = document.activeElement?.tagName.toLowerCase()
+      if (activeTag === "input" || activeTag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable) {
+        if (e.key === "Escape") {
+          (document.activeElement as HTMLElement).blur()
+        }
+        return
+      }
+
+      if (e.key === "c" || e.key === "C") {
+        e.preventDefault()
+        setShowCompose(true)
+      } else if (e.key === "/") {
+        e.preventDefault()
+        const searchInput = document.querySelector<HTMLInputElement>("header input[type='text']")
+        if (searchInput) searchInput.focus()
+      } else if (e.key === "?") {
+        e.preventDefault()
+        setShowShortcutsModal(prev => !prev)
+      } else if (e.key === "Escape") {
+        setShowShortcutsModal(false)
+        setShowCompose(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   // 1. Initial Data Setup (Run once)
   useEffect(() => {
@@ -65,9 +99,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             
             const id = mail.id || `nostr_${Date.now()}_${Math.random().toString(36).slice(2)}`
             
-            // 🛡️ [Phase 11 Fix] Nostr is a DELIVERY transport, not a data source.
-            // When mail arrives via Nostr, write it into the canonical user_mail_index
-            // on the shared relay so ALL devices see it — not just local memory.
             const existingMail = getAllRaw().find(m => m.id === id)
             let finalStatus = mail.status || "inbox"
             let finalFlaggedReason = mail.flaggedReason
@@ -95,13 +126,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               isRead: existingMail ? existingMail.isRead : false,
             }
 
-            // Write into the canonical index so cross-device sync picks it up
             const receiverEmail = mail.receiverEmail?.trim().toLowerCase()
             const senderEmail = mail.senderEmail?.trim().toLowerCase()
             if (receiverEmail) gun.get(`user_mail_index:${receiverEmail}`).get(id).put(indexEntry)
             if (senderEmail && senderEmail !== receiverEmail) gun.get(`user_mail_index:${senderEmail}`).get(id).put({ ...indexEntry, status: "sent", senderStatus: "sent" })
             
-            // Also store full body in securemail_mails
             const { receiverPublicKey, ...mailToStore } = indexEntry as any
             gun.get("securemail_mails").get(id).put({ ...mailToStore, id })
           })
@@ -110,7 +139,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
     }
 
-    // 📡 IPFS Discovery
     if (user.publicKey) {
       import("@/utils/ipfs").then(mod => {
         mod.startDiscoveryPubSub(user.email, user.publicKey)
@@ -118,10 +146,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [])
 
-  // 2. Background Maintenance (Throttle to reduce CPU)
+  // 2. Background Maintenance
   useEffect(() => {
     const interval = setInterval(async () => {
-      // 🧊 Only run if tab is active to save resources
       if (document.hidden) return
 
       const user = JSON.parse(localStorage.getItem("user") || "{}")
@@ -130,7 +157,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const now = Date.now()
       const allMails = getAllRaw()
 
-      // Process Snooze & Expiry in chunks to avoid blocking main thread
       for (let i = 0; i < allMails.length; i++) {
         const mail = allMails[i]
         if (!mail?.id) continue
@@ -142,7 +168,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       }
 
-      // 🕒 Process Outbox
       const scheduledKey = `scheduled_${user.email}`
       const scheduledMails = JSON.parse(localStorage.getItem(scheduledKey) || "[]")
       if (scheduledMails.length > 0) {
@@ -196,6 +221,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="dashboard-body">
             <Sidebar
               isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
               onCompose={() => setShowCompose(true)}
             />
             <main 
@@ -217,8 +243,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {showCompose && (
             <ComposeWindow onClose={() => setShowCompose(false)} />
           )}
+
+          {showShortcutsModal && (
+            <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+          )}
         </div>
       </LabelProvider>
     </ToastProvider>
   )
 }
+

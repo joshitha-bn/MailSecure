@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState, useMemo, useRef, Suspense } from "react"
+import { useEffect, useState, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { decryptMessage, db, cleanMessage } from "@/utils/gun"
-import { Star, Trash2, Mail, Reply, Forward, Lock, Search, ArrowLeft, Paperclip, Send, RefreshCw, Check, Tag } from "lucide-react"
+import { Star, Trash2, ArrowLeft, RefreshCw, Check, Tag } from "lucide-react"
 import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/mailStore"
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import SearchFiltersPanel, { SearchFilters, emptyFilters } from "@/components/SearchFiltersPanel"
 
 function StarredPageContent() {
   const router = useRouter()
@@ -18,15 +18,17 @@ function StarredPageContent() {
   const [mails, setMails] = useState<any[]>([])
   const [selectedMail, setSelectedMail] = useState<any>(null)
   const [userEmail, setUserEmail] = useState("")
-  const [searchQuery, setSearchQuery] = useState(urlSearch)
+  const [filters, setFilters] = useState<SearchFilters>({ ...emptyFilters(), query: urlSearch })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [userLabels, setUserLabels] = useState<Label[]>([])
   const [showLabelMenu, setShowLabelMenu] = useState(false)
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.query)
 
   useEffect(() => {
-    if (urlSearch) setSearchQuery(urlSearch)
-  }, [urlSearch])
+    const timer = setTimeout(() => setDebouncedSearch(filters.query), 300)
+    return () => clearTimeout(timer)
+  }, [filters.query])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -44,28 +46,62 @@ function StarredPageContent() {
     updateMails()
     const unsub = subscribe(updateMails)
     const unsubLabels = subscribeLabelStore(updateMails)
-    
+
     return () => {
       unsub()
       unsubLabels()
     }
   }, [])
 
-  const currentSelectedMail = useMemo(() => {
-    if (!selectedMail) return null
-    return mails.find(m => m.id === selectedMail.id) || selectedMail
-  }, [mails, selectedMail])
-
   const filteredMails = useMemo(() => {
     return mails
       .filter(m => {
         if (activeLabelId && !getMailLabels(userEmail, m.id).includes(activeLabelId)) return false
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase()
+
+        // Advanced filter: has attachment
+        if (filters.hasAttachment && !m.cid && !m.attachments?.length) return false
+
+        // Advanced filter: from sender
+        if (filters.from) {
+          const q = filters.from.toLowerCase()
+          if (!m.senderEmail?.toLowerCase().includes(q) && !m.senderName?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: to recipient
+        if (filters.to) {
+          const q = filters.to.toLowerCase()
+          if (!m.receiverEmail?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: subject
+        if (filters.subject) {
+          const q = filters.subject.toLowerCase()
+          if (!m.subject?.toLowerCase().includes(q)) return false
+        }
+
+        // Advanced filter: date after
+        if (filters.dateAfter) {
+          const after = new Date(filters.dateAfter).getTime()
+          const mailTime = m.time ? new Date(m.time).getTime() : 0
+          if (mailTime < after) return false
+        }
+
+        // Advanced filter: date before
+        if (filters.dateBefore) {
+          const before = new Date(filters.dateBefore).getTime() + 86400000
+          const mailTime = m.time ? new Date(m.time).getTime() : 0
+          if (mailTime > before) return false
+        }
+
+        // Basic keyword search
+        if (debouncedSearch) {
+          const q = debouncedSearch.toLowerCase()
           return (
             m.subject?.toLowerCase().includes(q) ||
             m.senderEmail?.toLowerCase().includes(q) ||
-            m.message?.toLowerCase().includes(q)
+            m.message?.toLowerCase().includes(q) ||
+            m.id?.toLowerCase().includes(q) ||
+            m.time?.toLowerCase().includes(q)
           )
         }
         return true
@@ -74,7 +110,7 @@ function StarredPageContent() {
         const getTime = (m: any) => m.time ? new Date(m.time).getTime() : 0
         return getTime(b) - getTime(a)
       })
-  }, [mails, searchQuery, activeLabelId, userEmail])
+  }, [mails, debouncedSearch, activeLabelId, userEmail, filters])
 
   const toggleSelection = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -102,6 +138,11 @@ function StarredPageContent() {
     setSelectedMail(null)
   }
 
+  const currentSelectedMail = useMemo(() => {
+    if (!selectedMail) return null
+    return mails.find(m => m.id === selectedMail.id) || selectedMail
+  }, [mails, selectedMail])
+
   const openMail = (mail: any) => {
     setSelectedMail(mail)
   }
@@ -119,7 +160,7 @@ function StarredPageContent() {
     if (!mail) return null
 
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "40px", borderLeft: "1px solid #141414", position: "relative" }}>
+      <div className="mail-detail-pane" style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "40px", borderLeft: "1px solid #141414", position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px" }}>
           <button 
             onClick={() => setSelectedMail(null)}
@@ -240,32 +281,44 @@ function StarredPageContent() {
 
   return (
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
-      <div style={{ 
-        width: selectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
-        transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto",
-        willChange: "width"
-      }}>
+      <div 
+        className={`mail-list-pane ${selectedMail ? "has-selected" : ""}`}
+        style={{ 
+          width: selectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
+          transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto",
+          willChange: "width"
+        }}>
         <div style={{ padding: "24px 24px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-bright)", margin: 0 }}>Starred</h2>
-            {activeLabelId && (
-              <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/starred"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
-            )}
-            <button 
-              onClick={() => { 
-                setIsRefreshing(true); 
-                initMailStore(userEmail, true);
-              }} 
-              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", marginLeft: "auto" }}
-            >
-              <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Star size={24} color="var(--gold-mid)" fill="var(--gold-mid)" />
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Starred</h1>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", margin: "2px 0 0 0" }}>Messages you've flagged for quick access</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {activeLabelId && (
+                <button onClick={() => { setActiveLabelId(null); router.push("/dashboard/starred"); }} style={{ background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear Filter</button>
+              )}
+              <button 
+                onClick={() => { setIsRefreshing(true); initMailStore(userEmail, true); }}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex", alignItems: "center", transition: "color 0.2s, transform 0.3s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.transform = "rotate(180deg)" }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.transform = "rotate(0deg)" }}
+                title="Refresh Starred"
+              >
+                <RefreshCw size={18} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
+              </button>
+            </div>
           </div>
           
-          <div style={{ position: "relative", marginBottom: "16px" }}>
-            <Search size={16} color="var(--text-dim)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-            <input type="text" placeholder="Search starred mail..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: "100%", background: "var(--bg-card)", border: "1px solid #141414", borderRadius: "10px", padding: "10px 12px 10px 40px", color: "var(--text-bright)", fontSize: "13px", outline: "none" }} />
-          </div>
+          <SearchFiltersPanel
+            filters={filters}
+            onChange={setFilters}
+            onClear={() => setFilters(emptyFilters())}
+            placeholder="Search starred mail..."
+          />
         </div>
 
         <div style={{ 
@@ -327,11 +380,10 @@ function StarredPageContent() {
   )
 }
 
-
 export default function StarredPage() {
   return (
     <Suspense fallback={null}>
       <StarredPageContent />
     </Suspense>
-  );
+  )
 }

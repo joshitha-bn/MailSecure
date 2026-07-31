@@ -19,6 +19,7 @@
     "multer": "^2.1.1",
     "nodemailer": "^9.0.3",
     "openpgp": "^6.3.0",
+    "smtp-server": "^3.19.2",
     "ws": "^8.20.0"
   },
   "devDependencies": {

@@ -991,6 +991,13 @@ body {
    COMPOSE BOX (page-based)
    ============================================= */
 
+/* Placeholder for contentEditable compose editor */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
 .compose-box {
   max-width: 700px;
 }

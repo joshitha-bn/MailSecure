@@ -172,7 +172,7 @@ export default function ImportantPage() {
         </button>
       </div>
 
-      <div style={{ maxWidth: "860px" }}>
+      <div style={{ maxWidth: "100%" }}>
         <h1 style={{ fontSize: "26px", color: "var(--text-bright)", marginBottom: "24px", fontWeight: "700", lineHeight: 1.3 }}>
           {selectedMail.subject || "(No subject)"}
         </h1>
@@ -201,7 +201,7 @@ export default function ImportantPage() {
             <div style={{
               padding: "48px 40px", background: "var(--bg-vault)",
               border: "1px solid var(--border-gold)", borderRadius: "16px",
-              maxWidth: "600px", boxShadow: "var(--shadow-deep)"
+              maxWidth: "100%", boxShadow: "var(--shadow-deep)"
             }}>
               <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
                 <Shield size={48} color="var(--gold-mid)" strokeWidth={1} />
@@ -267,7 +267,8 @@ export default function ImportantPage() {
   )
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
+      <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", maxWidth: "100%", margin: "0 auto" }}>
       {!selectedMail && (
         <>
           <PageHeader
@@ -387,6 +388,7 @@ export default function ImportantPage() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

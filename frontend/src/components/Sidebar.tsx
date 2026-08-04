@@ -360,7 +360,6 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
       {showLogoutModal && (
         <div className="modal-overlay" onClick={() => setShowLogoutModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: "400px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", marginBottom: "16px" }}>🚪</div>
             <h3 style={{ marginBottom: "12px", fontSize: "20px", fontWeight: "700" }}>Sign Out?</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: 1.6 }}>
               You are about to sign out of your current session. Your credentials will remain saved in your vault.

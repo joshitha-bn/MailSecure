@@ -83,9 +83,47 @@ export default function ComposeWindow({
   const [isSending, setIsSending] = useState(false)
   const [showFormatBar, setShowFormatBar] = useState(true)
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
   const currentDraftId = useRef<string | null>(defaultDraftId || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [formatStates, setFormatStates] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    insertUnorderedList: false
+  })
+
+  const updateFormatStates = useCallback(() => {
+    if (!editorRef.current) return
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    const range = selection.getRangeAt(0)
+    const container = range.commonAncestorContainer
+    if (editorRef.current.contains(container) || editorRef.current === container) {
+      setFormatStates({
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        strikeThrough: document.queryCommandState("strikeThrough"),
+        insertUnorderedList: document.queryCommandState("insertUnorderedList")
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener("selectionchange", updateFormatStates)
+    return () => {
+      document.removeEventListener("selectionchange", updateFormatStates)
+    }
+  }, [updateFormatStates])
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = defaultMessage || ""
+    }
+  }, [defaultMessage])
 
   // Extract unique contacts from past emails
   useEffect(() => {
@@ -215,21 +253,33 @@ export default function ComposeWindow({
     localStorage.setItem(`drafts_${normalizedEmail}`, JSON.stringify(drafts))
   }
 
-  // Formatting tool action handler for textarea selection
-  const applyFormatting = (prefix: string, suffix: string = "") => {
-    if (!textareaRef.current) return
-    const textarea = textareaRef.current
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = message.substring(start, end)
-    const replacement = `${prefix}${selectedText}${suffix}`
-    const newMessage = message.substring(0, start) + replacement + message.substring(end)
-    setMessage(newMessage)
+  // Save last known selection range in the editor
+  const savedRangeRef = useRef<Range | null>(null)
 
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(start + prefix.length, end + prefix.length)
-    }, 10)
+  const saveSelection = () => {
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange()
+    }
+  }
+
+  const restoreSelection = () => {
+    const sel = window.getSelection()
+    if (savedRangeRef.current && sel) {
+      sel.removeAllRanges()
+      sel.addRange(savedRangeRef.current)
+    }
+  }
+
+  // Formatting tool action handler using execCommand
+  const applyFormatting = (command: string, value: string = "") => {
+    editorRef.current?.focus()
+    restoreSelection()
+    document.execCommand(command, false, value)
+    if (editorRef.current) {
+      setMessage(editorRef.current.innerHTML)
+    }
+    updateFormatStates()
   }
 
   // File handling
@@ -576,45 +626,86 @@ export default function ComposeWindow({
           borderBottom: "1px solid var(--border-color)", flexShrink: 0
         }}>
           <button
-            onClick={() => applyFormatting("<b>", "</b>")}
-            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyFormatting("bold")}
+            style={{ 
+              padding: "4px 8px", 
+              background: formatStates.bold ? "rgba(212, 175, 55, 0.15)" : "none", 
+              border: `1px solid ${formatStates.bold ? "var(--gold-mid)" : "var(--border-color)"}`, 
+              borderRadius: "4px", 
+              color: formatStates.bold ? "var(--gold-mid)" : "var(--text-bright)", 
+              cursor: "pointer" 
+            }}
             title="Bold"
           >
             <Bold size={13} />
           </button>
           <button
-            onClick={() => applyFormatting("<i>", "</i>")}
-            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyFormatting("italic")}
+            style={{ 
+              padding: "4px 8px", 
+              background: formatStates.italic ? "rgba(212, 175, 55, 0.15)" : "none", 
+              border: `1px solid ${formatStates.italic ? "var(--gold-mid)" : "var(--border-color)"}`, 
+              borderRadius: "4px", 
+              color: formatStates.italic ? "var(--gold-mid)" : "var(--text-bright)", 
+              cursor: "pointer" 
+            }}
             title="Italic"
           >
             <Italic size={13} />
           </button>
           <button
-            onClick={() => applyFormatting("<u>", "</u>")}
-            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyFormatting("underline")}
+            style={{ 
+              padding: "4px 8px", 
+              background: formatStates.underline ? "rgba(212, 175, 55, 0.15)" : "none", 
+              border: `1px solid ${formatStates.underline ? "var(--gold-mid)" : "var(--border-color)"}`, 
+              borderRadius: "4px", 
+              color: formatStates.underline ? "var(--gold-mid)" : "var(--text-bright)", 
+              cursor: "pointer" 
+            }}
             title="Underline"
           >
             <Underline size={13} />
           </button>
           <button
-            onClick={() => applyFormatting("<strike>", "</strike>")}
-            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyFormatting("strikeThrough")}
+            style={{ 
+              padding: "4px 8px", 
+              background: formatStates.strikeThrough ? "rgba(212, 175, 55, 0.15)" : "none", 
+              border: `1px solid ${formatStates.strikeThrough ? "var(--gold-mid)" : "var(--border-color)"}`, 
+              borderRadius: "4px", 
+              color: formatStates.strikeThrough ? "var(--gold-mid)" : "var(--text-bright)", 
+              cursor: "pointer" 
+            }}
             title="Strikethrough"
           >
             <Strikethrough size={13} />
           </button>
           <div style={{ width: "1px", height: "18px", background: "var(--border-color)", margin: "0 4px" }} />
           <button
-            onClick={() => applyFormatting("\n• ")}
-            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyFormatting("insertUnorderedList")}
+            style={{ 
+              padding: "4px 8px", 
+              background: formatStates.insertUnorderedList ? "rgba(212, 175, 55, 0.15)" : "none", 
+              border: `1px solid ${formatStates.insertUnorderedList ? "var(--gold-mid)" : "var(--border-color)"}`, 
+              borderRadius: "4px", 
+              color: formatStates.insertUnorderedList ? "var(--gold-mid)" : "var(--text-bright)", 
+              cursor: "pointer" 
+            }}
             title="Bullet List"
           >
             <List size={13} />
           </button>
           <button
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               const url = prompt("Enter URL:")
-              if (url) applyFormatting(`<a href="${url}">`, "</a>")
+              if (url) applyFormatting("createLink", url)
             }}
             style={{ padding: "4px 8px", background: "none", border: "1px solid var(--border-color)", borderRadius: "4px", color: "var(--text-bright)", cursor: "pointer" }}
             title="Insert Link"
@@ -625,16 +716,30 @@ export default function ComposeWindow({
       )}
 
       {/* ── Body ── */}
-      <textarea
-        ref={textareaRef}
+      <div
+        ref={editorRef}
+        contentEditable
+        data-placeholder="Write your message..."
+        onBlur={() => {
+          saveSelection()
+          if (editorRef.current) {
+            setMessage(editorRef.current.innerHTML)
+          }
+        }}
+        onInput={() => {
+          if (editorRef.current) {
+            setMessage(editorRef.current.innerHTML)
+          }
+        }}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
         style={{
           flex: 1, background: "none", border: "none", outline: "none",
-          padding: "20px", fontSize: "14px", color: "var(--text-muted)",
-          lineHeight: "1.8", resize: "none",
+          padding: "20px", fontSize: "14px", color: "var(--text-bright)",
+          lineHeight: "1.8", resize: "none", overflowY: "auto",
+          minHeight: "100px"
         }}
-        placeholder="Write your message..."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        suppressContentEditableWarning
       />
 
       {/* ── Status message ── */}

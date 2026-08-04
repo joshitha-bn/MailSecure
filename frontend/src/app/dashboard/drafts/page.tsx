@@ -306,7 +306,7 @@ function DraftsPageContent() {
         width: selectedDraft ? "380px" : "100%",
         display: "flex", flexDirection: "column", flexShrink: 0,
         transition: "width 0.3s ease",
-        maxWidth: selectedDraft ? "380px" : "1200px",
+        maxWidth: selectedDraft ? "380px" : "100%",
         margin: selectedDraft ? "0" : "0 auto",
         borderRight: selectedDraft ? "1px solid var(--border-color)" : "none",
       }}>

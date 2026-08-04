@@ -35,7 +35,7 @@ export default function SnoozedPage() {
     <div style={{ display: "flex", height: "100%", background: "var(--bg-body)", overflow: "hidden" }}>
       <div style={{
         width: selectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
-        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto"
+        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", maxWidth: selectedMail ? "360px" : "100%", margin: selectedMail ? "0" : "0 auto"
       }}>
         <div style={{ padding: "24px 24px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>

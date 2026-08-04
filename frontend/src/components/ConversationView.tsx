@@ -437,7 +437,7 @@ export default function ConversationView({
                               >UNLOCK MESSAGE</button>
                             </div>
                           </div>
-                        ) : msg.html ? (
+                        ) : (msg.html || (content && /<[a-z][\s\S]*>/i.test(content))) ? (
                           <div style={{ borderRadius: "8px", overflow: "hidden", background: "#ffffff", border: "1px solid var(--border-gold)", width: "100%" }}>
                             <iframe
                               srcDoc={`
@@ -460,7 +460,7 @@ export default function ConversationView({
                                     </style>
                                   </head>
                                   <body>
-                                    ${msg.html}
+                                    ${msg.html || content}
                                   </body>
                                 </html>
                               `}

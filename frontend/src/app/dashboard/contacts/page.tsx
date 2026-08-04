@@ -11,7 +11,7 @@ import {
 } from "@/utils/contacts"
 import { copyToClipboard } from "@/utils/clipboard"
 import PageHeader from "@/components/PageHeader"
-import { Users } from "lucide-react"
+import { Users, Eye, EyeOff } from "lucide-react"
 
 let contactsCache: Contact[] | null = null
 let cacheEmail = ""
@@ -37,6 +37,7 @@ export default function ContactsPage() {
   const [successMsg, setSuccessMsg]       = useState("")
   const [fetchingKey, setFetchingKey]     = useState(false)
   const [copiedKey, setCopiedKey]         = useState(false)
+  const [showPassword, setShowPassword]   = useState(false)
 
   // ── Auto-fetch public key when email is typed ──
   const [keyPreview, setKeyPreview]       = useState<string | null>(null)
@@ -496,20 +497,33 @@ export default function ContactsPage() {
                   }}>Warning {passError}</div>
                 )}
 
-                <input
-                  type="password"
-                  placeholder="Vault Passphrase"
-                  value={passInput}
-                  onChange={(e) => { setPassInput(e.target.value); setPassError("") }}
-                  onKeyDown={(e) => e.key === "Enter" && !unlocking && handleUnlock()}
-                  style={{ 
-                    width: "100%", background: "var(--mail-row-border)", border: "1px solid #1F1F1F", 
-                    borderRadius: "8px", padding: "14px 16px", color: "var(--text-bright)", 
-                    fontSize: "14px", outline: "none", textAlign: "center", marginBottom: "16px" 
-                  }}
-                  autoFocus
-                  disabled={unlocking}
-                />
+                <div style={{ position: "relative", marginBottom: "16px" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Vault Passphrase"
+                    value={passInput}
+                    onChange={(e) => { setPassInput(e.target.value); setPassError("") }}
+                    onKeyDown={(e) => e.key === "Enter" && !unlocking && handleUnlock()}
+                    style={{ 
+                      width: "100%", background: "var(--mail-row-border)", border: "1px solid #1F1F1F", 
+                      borderRadius: "8px", padding: "14px 44px 14px 16px", color: "var(--text-bright)", 
+                      fontSize: "14px", outline: "none", textAlign: "center" 
+                    }}
+                    autoFocus
+                    disabled={unlocking}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
 
                 <div style={{ display: "flex", gap: "12px" }}>
                   <button 

@@ -177,7 +177,7 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "100%", margin: "0 auto" }}>
 
       {/* Avatar */}
       <div style={{ textAlign: "center", marginBottom: "32px" }}>

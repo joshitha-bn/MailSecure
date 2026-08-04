@@ -88,7 +88,7 @@ export default function OutboxPage() {
         width: selectedMail ? "380px" : "100%",
         display: "flex", flexDirection: "column", flexShrink: 0,
         transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
-        maxWidth: selectedMail ? "380px" : "900px",
+        maxWidth: selectedMail ? "380px" : "100%",
         margin: selectedMail ? "0" : "0 auto",
         borderRight: selectedMail ? "1px solid var(--border-color)" : "none",
       }}>

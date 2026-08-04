@@ -151,7 +151,7 @@ export default function GlobalDiscoveryPage() {
       />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "20px" }} ref={scrollRef}>
-        <div style={{ maxWidth: "700px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "100%", margin: "0 auto" }}>
           
           {/* Broadcast Input Area */}
           <div style={{

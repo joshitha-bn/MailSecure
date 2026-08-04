@@ -285,7 +285,7 @@ function StarredPageContent() {
         className={`mail-list-pane ${selectedMail ? "has-selected" : ""}`}
         style={{ 
           width: selectedMail ? "360px" : "100%", display: "flex", flexDirection: "column", flexShrink: 0,
-          transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "1200px", margin: selectedMail ? "0" : "0 auto",
+          transition: "width 0.3s ease", maxWidth: selectedMail ? "360px" : "100%", margin: selectedMail ? "0" : "0 auto",
           willChange: "width"
         }}>
         <div style={{ padding: "24px 24px 12px" }}>

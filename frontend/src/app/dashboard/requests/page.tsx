@@ -110,7 +110,7 @@ function RequestsPageContent() {
 
   return (
     <div style={{ height: "100%", background: "var(--bg-body)", overflowY: "auto", padding: "0" }}>
-      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 24px 40px" }}>
+      <div style={{ maxWidth: "100%", margin: "0 auto", padding: "24px 24px 40px" }}>
         
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>

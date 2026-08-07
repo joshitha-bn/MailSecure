@@ -512,13 +512,22 @@ function LoginForm() {
                 onClick={() => router.push("/signup")}
                 style={{ background: "none", border: "none", color: "var(--text-dim)", fontWeight: "500", cursor: "pointer", fontSize: "13px" }}
               >Create account</button>
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                 <button
+                  className="btn-secondary"
                   onClick={restoreIdentity} disabled={loading}
                   style={{ 
-                    background: "rgba(212, 175, 55, 0.1)", color: "var(--gold-mid)", border: "1px solid rgba(212, 175, 55, 0.2)",
-                    borderRadius: "8px", padding: "10px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
-                    opacity: loading ? 0.6 : 1
+                    padding: "11px 24px",
+                    borderRadius: "25px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    fontFamily: "Raleway, sans-serif",
+                    letterSpacing: "0.5px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: loading ? 0.6 : 1,
+                    cursor: loading ? "not-allowed" : "pointer"
                   }}
                 >Restore</button>
                 <button

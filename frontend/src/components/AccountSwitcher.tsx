@@ -25,7 +25,6 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
   const [accounts, setAccounts] = useState<SavedAccount[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
   const [inboxCount, setInboxCount] = useState(0)
-  const [removing, setRemoving] = useState<string | null>(null)
   
   // Custom Confirmation State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -36,6 +35,16 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
   
   const [passwordAttempt, setPasswordAttempt] = useState("")
   const [passwordError, setPasswordError] = useState("")
+
+  const refreshAccounts = () => {
+    setAccounts(getSavedAccounts())
+    const user = getCurrentAccount()
+    if (user) {
+      setCurrentEmail(user.email)
+      const c = getCounts(user.email)
+      setInboxCount(c.totalInbox)
+    }
+  }
 
   useEffect(() => {
     refreshAccounts()
@@ -50,17 +59,7 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
       unsub()
       document.removeEventListener("mousedown", handleClick)
     }
-  }, [])
-
-  const refreshAccounts = () => {
-    setAccounts(getSavedAccounts())
-    const user = getCurrentAccount()
-    if (user) {
-      setCurrentEmail(user.email)
-      const c = getCounts(user.email)
-      setInboxCount(c.totalInbox)
-    }
-  }
+  }, [onClose])
 
   const handleSwitch = (account: SavedAccount) => {
     if (account.email === currentEmail) { onClose(); return }
@@ -96,9 +95,8 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
     confirmConfig?.onConfirm()
   }
 
-  const isDarkMode = document.documentElement.getAttribute("data-theme") === "dark"
-  const themeBg = isDarkMode ? "var(--bg-body)" : "#ffffff"
-  const themeText = isDarkMode ? "#ffffff" : "#1a1a1a"
+  const themeBg = "var(--bg-body)"
+  const themeText = "#ffffff"
   const themeGold = "var(--gold-mid)"
 
   return (
@@ -156,14 +154,16 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
       {/* Account Switcher Dropdown */}
       <div ref={ref} style={{
         position: "absolute", top: "calc(100% + 12px)", right: 0,
-        width: "360px", background: themeBg, border: `1px solid ${themeGold}`,
+        width: "360px", maxWidth: "calc(100vw - 24px)", maxHeight: "calc(100vh - 80px)",
+        display: "flex", flexDirection: "column",
+        background: themeBg, border: `1px solid ${themeGold}`,
         borderRadius: "28px", overflow: "hidden", 
-        boxShadow: `0 20px 50px ${isDarkMode ? "rgba(0,0,0,1)" : "rgba(212, 175, 55,0.15)"}`, zIndex: 1000,
+        boxShadow: "0 20px 50px rgba(0,0,0,1)", zIndex: 1000,
         animation: "fadeUp 0.3s cubic-bezier(0.23, 1, 0.32, 1) both"
       }}>
 
-        {/* User Info Header */}
-        <div style={{ padding: "24px", textAlign: "center", borderBottom: `1px solid rgba(212, 175, 55,0.15)` }}>
+        {/* User Info Header (Fixed) */}
+        <div style={{ padding: "24px", textAlign: "center", borderBottom: `1px solid rgba(212, 175, 55,0.15)`, flexShrink: 0 }}>
           <div style={{ 
             width: "80px", height: "80px", borderRadius: "50%", 
             background: `linear-gradient(135deg, ${themeBg}, rgba(212, 175, 55,0.2))`, margin: "0 auto 16px",
@@ -197,9 +197,9 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
           </button>
         </div>
 
-        {/* Other Accounts List */}
+        {/* Other Accounts List (Scrollable) */}
         {accounts.filter(a => a.email !== currentEmail).length > 0 && (
-          <div style={{ borderBottom: `1px solid rgba(212, 175, 55,0.15)`, padding: "8px 0" }}>
+          <div className="account-switcher-scroll" style={{ flex: 1, minHeight: 0, borderBottom: `1px solid rgba(212, 175, 55,0.15)`, padding: "8px 0" }}>
             {accounts.filter(a => a.email !== currentEmail).map(acc => (
               <div 
                 key={acc.email} 
@@ -227,8 +227,8 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
           </div>
         )}
 
-        {/* Actions */}
-        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {/* Sticky Actions Footer */}
+        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px", flexShrink: 0, background: themeBg }}>
           <button 
             onClick={() => { onClose(); router.push("/login?add=true") }}
             style={{ 
@@ -274,7 +274,7 @@ export default function AccountSwitcher({ onClose }: AccountSwitcherProps) {
           </button>
         </div>
 
-        <div style={{ padding: "16px", textAlign: "center", fontSize: "10px", color: "var(--text-muted)", borderTop: "1px solid rgba(212, 175, 55,0.1)", textTransform: "uppercase", letterSpacing: "1px" }}>
+        <div style={{ padding: "16px", textAlign: "center", fontSize: "10px", color: "var(--text-muted)", borderTop: "1px solid rgba(212, 175, 55,0.1)", textTransform: "uppercase", letterSpacing: "1px", flexShrink: 0 }}>
           Decentralized Protocol • SECURE
         </div>
       </div>

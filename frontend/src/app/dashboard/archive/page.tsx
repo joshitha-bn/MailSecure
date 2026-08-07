@@ -140,11 +140,20 @@ function ArchivePageContent() {
   }
 
   const handleDecrypt = async () => {
-    if (!vaultPassword || !currentSelectedMail) return
+    if (!vaultPassword || !vaultPassword.trim() || !currentSelectedMail) {
+      setDecryptError("Incorrect password. Please enter your account password.")
+      return
+    }
     setDecrypting(true)
     setDecryptError("")
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}")
+      // 🛡️ Validate entered password against user credentials
+      if (user.password && vaultPassword !== user.password) {
+        setDecryptError("Incorrect password. Please enter your account password.")
+        setDecrypting(false)
+        return
+      }
       if (currentSelectedMail.message?.includes("-----BEGIN PGP MESSAGE-----")) {
         const decrypted = await decryptMessage(currentSelectedMail.message, user.privateKey, vaultPassword)
         setDecryptedContent(decrypted)
@@ -155,7 +164,7 @@ function ArchivePageContent() {
       }
       setVaultPassword("")
     } catch (err) {
-      setDecryptError("Incorrect Vault Passphrase")
+      setDecryptError("Incorrect password. Please enter your account password.")
     } finally {
       setDecrypting(false)
     }

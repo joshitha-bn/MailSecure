@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getCounts, subscribe } from "@/utils/mailStore"
 import { copyToClipboard } from "@/utils/clipboard"
 import { db } from "@/utils/gun"
 import { 
-  User, Inbox, Send, Star, AlertOctagon, Trash2, 
+  User,
   Key, Copy, Check, Download, Lock, Shield, X, 
   RefreshCw, CheckCircle2, XCircle 
 } from "lucide-react"
@@ -14,7 +13,6 @@ import {
 export default function ProfilePage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [counts, setCounts] = useState<any>({ inbox: 0, sent: 0, spam: 0, starred: 0, trash: 0, request: 0, drafts: 0 })
   const [copiedPublic, setCopiedPublic] = useState(false)
   const [showFullPublicKey, setShowFullPublicKey] = useState(false)
   
@@ -68,7 +66,6 @@ export default function ProfilePage() {
       const localUser = JSON.parse(raw)
       if (!localUser.email) return
       setUser(localUser)
-      setCounts(getCounts(localUser.email))
     } catch {
       // Corrupted localStorage — do nothing
     }
@@ -76,15 +73,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadCurrentUser()
-
-    const updateStats = () => {
-      try {
-        const raw = localStorage.getItem("user")
-        if (!raw) return
-        const localUser = JSON.parse(raw)
-        if (localUser.email) setCounts(getCounts(localUser.email))
-      } catch {}
-    }
 
     // Re-read active account whenever it changes (cross-tab via storage event)
     const handleStorageChange = (e: StorageEvent) => {
@@ -103,9 +91,7 @@ export default function ProfilePage() {
     window.addEventListener("accountSwitch", handleAccountSwitch)
     window.addEventListener("focus", handleFocus)
 
-    const unsub = subscribe(updateStats)
     return () => {
-      unsub()
       window.removeEventListener("storage", handleStorageChange)
       window.removeEventListener("accountSwitch", handleAccountSwitch)
       window.removeEventListener("focus", handleFocus)
@@ -239,33 +225,6 @@ export default function ProfilePage() {
            syncStatus === "error" ? <><XCircle size={14} /> Sync Failed</> : 
            <><RefreshCw size={14} /> Sync Identity with Network</>}
         </button>
-      </div>
-
-      {/* Stats */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-        gap: "12px", marginBottom: "28px",
-      }}>
-        {[
-          { icon: <Inbox size={22} color="var(--gold-mid)" />, label: "Inbox",   count: counts.inbox   || 0 },
-          { icon: <Send size={22} color="var(--gold-mid)" />, label: "Sent",    count: counts.sent    || 0 },
-          { icon: <Star size={22} color="var(--gold-mid)" />, label: "Starred", count: counts.starred || 0 },
-          { icon: <AlertOctagon size={22} color="var(--gold-mid)" />, label: "Spam",    count: counts.spam    || 0 },
-          { icon: <Trash2 size={22} color="var(--gold-mid)" />, label: "Trash",   count: counts.trash   || 0 },
-        ].map(({ icon, label, count }) => (
-          <div key={label} style={{
-            background: "var(--bg-card)", border: "1px solid var(--border-gold)",
-            borderRadius: "12px", padding: "16px", textAlign: "center",
-          }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>{icon}</div>
-            <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--gold-light)" }}>
-              {count}
-            </div>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-              {label}
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Public Key */}

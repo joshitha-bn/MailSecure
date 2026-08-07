@@ -6,6 +6,7 @@ import dotenv from "dotenv"
 import multer from "multer"
 import { getGatewayConfig, saveGatewayConfig } from "./config_manager.js"
 import { initSMTPTransporter, startIMAPSync, sendSMTPEmail, indexOutgoingMessage } from "./imap_sync.js"
+import authRouter from "./routes/auth.js"
 
 dotenv.config()
 
@@ -154,7 +155,13 @@ const gun = Gun({
   // peers: [] intentionally empty — this IS the canonical relay
 })
 
+app.locals.gun = gun
+
 console.log("📡 [Relay] Running as primary relay — all devices should connect to this server")
+
+// ── Auth & Username Routes ──
+app.use("/api/auth", authRouter)
+app.use(authRouter)
 
 // ── Initialize Hybrid Gateway SMTP and IMAP Workers ──
 initSMTPTransporter()

@@ -1,13 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Logo from "@/components/Logo"
-import { Eye, EyeOff, Lock, Mail, CheckCircle, Shield, Clipboard, ShieldCheck, ShieldAlert, ArrowLeft, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, CheckCircle, Clipboard, ShieldCheck, ShieldAlert, ArrowRight, Check, X, AlertTriangle, Loader2, Sparkles } from "lucide-react"
 import { MAIL_DOMAIN } from "@/utils/config"
-
-// DYNAMIC IMPORTS to prevent 500 Internal Server Errors during SSR
-// We load heavy dependencies only when the user interacts or after hydration.
 
 export default function Signup() {
   const router = useRouter()
@@ -16,25 +13,222 @@ export default function Signup() {
   const [name, setName] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [username, setUsername] = useState("")
+
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null)
+
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean
+    available?: boolean
+    status?: "available" | "taken" | "reserved" | "invalid" | "error"
+    message?: string
+  }>({ checking: false })
+
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
   const [createdEmail, setCreatedEmail] = useState("")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [copiedEmail, setCopiedEmail] = useState(false)
+  const [copiedMnemonic, setCopiedMnemonic] = useState(false)
+  const [mnemonic, setMnemonic] = useState("")
+
+  const checkAbortRef = useRef<AbortController | null>(null)
+  const suggestAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const [mnemonic, setMnemonic] = useState("")
+  // Client-side strict username format validation
+  const validateFormat = (val: string): { valid: boolean; error?: string } => {
+    if (!val) return { valid: false, error: "Username is required." }
+    const clean = val.trim().toLowerCase()
+    if (clean.includes(" ")) return { valid: false, error: "Spaces are not allowed in DMail usernames." }
+    if (clean.length < 3) return { valid: false, error: "Must be at least 3 characters long." }
+    if (clean.length > 30) return { valid: false, error: "Must not exceed 30 characters." }
+    if (!/^[a-z0-9._-]+$/.test(clean)) return { valid: false, error: "Only lowercase letters, numbers, dots, hyphens, and underscores are allowed." }
+    if (/^[._-]/.test(clean) || /[._-]$/.test(clean)) return { valid: false, error: "Cannot start or end with a dot, hyphen, or underscore." }
+    if (/[._-]{2,}/.test(clean)) return { valid: false, error: "Cannot contain consecutive special characters." }
+    return { valid: true }
+  }
+
+  // Perform availability check with Debounce + AbortController
+  const performCheck = useCallback(async (targetUsername: string) => {
+    if (!targetUsername) {
+      setUsernameStatus({ checking: false })
+      return
+    }
+
+    const clean = targetUsername.trim().toLowerCase()
+    const fmt = validateFormat(clean)
+    if (!fmt.valid) {
+      setUsernameStatus({
+        checking: false,
+        available: false,
+        status: "invalid",
+        message: fmt.error
+      })
+      return
+    }
+
+    setUsernameStatus({ checking: true })
+
+    // Cancel previous inflight check
+    if (checkAbortRef.current) {
+      checkAbortRef.current.abort()
+    }
+    const controller = new AbortController()
+    checkAbortRef.current = controller
+
+    try {
+      // 1. Try Backend Relay Check Endpoint
+      const backendUrl = process.env.NEXT_PUBLIC_GUN_RELAY || "http://localhost:8765"
+      const res = await fetch(`${backendUrl}/api/auth/check-username?username=${encodeURIComponent(clean)}`, {
+        signal: controller.signal
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setUsernameStatus({
+          checking: false,
+          available: data.available,
+          status: data.status,
+          message: data.message
+        })
+        return
+      }
+    } catch (err: any) {
+      if (err.name === "AbortError") return
+    }
+
+    // 2. Mesh Fallback (GunDB)
+    try {
+      const { db } = await import("@/utils/gun")
+      const targetEmail = `${clean}@${MAIL_DOMAIN}`
+      
+      const meshData = await new Promise<{ publicKey?: string; password?: string } | null>(res => {
+        const timeout = setTimeout(() => res(null), 1200)
+        db.getUser(targetEmail, (data: any) => {
+          clearTimeout(timeout)
+          res(data)
+        }, true)
+      })
+
+      if (meshData && (meshData.publicKey || meshData.password)) {
+        setUsernameStatus({
+          checking: false,
+          available: false,
+          status: "taken",
+          message: "Username is already taken in the network."
+        })
+      } else {
+        setUsernameStatus({
+          checking: false,
+          available: true,
+          status: "available",
+          message: "Username is available!"
+        })
+      }
+    } catch {
+      setUsernameStatus({
+        checking: false,
+        available: true,
+        status: "available",
+        message: "Username is available!"
+      })
+    }
+  }, [])
+
+  // Watch username changes with 400ms debounce
+  useEffect(() => {
+    if (!username.trim()) {
+      setUsernameStatus({ checking: false })
+      return
+    }
+
+    const timer = setTimeout(() => {
+      performCheck(username)
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [username, performCheck])
+
+  // Generate Suggestions based on Name with 400ms debounce + AbortController
+  useEffect(() => {
+    if (!name.trim()) {
+      setSuggestions([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setLoadingSuggestions(true)
+
+      if (suggestAbortRef.current) {
+        suggestAbortRef.current.abort()
+      }
+      const controller = new AbortController()
+      suggestAbortRef.current = controller
+
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_GUN_RELAY || "http://localhost:8765"
+        const res = await fetch(`${backendUrl}/api/auth/suggest-usernames?name=${encodeURIComponent(name.trim())}`, {
+          signal: controller.signal
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.suggestions && Array.isArray(data.suggestions)) {
+            setSuggestions(data.suggestions)
+            setLoadingSuggestions(false)
+            return
+          }
+        }
+      } catch (err: any) {
+        if (err.name === "AbortError") return
+      }
+
+      // Local fallback suggestions
+      const cleanParts = name.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).filter(Boolean)
+      if (cleanParts.length > 0) {
+        const first = cleanParts[0]
+        const last = cleanParts.length > 1 ? cleanParts[cleanParts.length - 1] : ""
+        const currentYr = new Date().getFullYear().toString().slice(-2)
+        const fallbacks = last 
+          ? [`${first}.${last}`, `${first}_${last}`, `${first}${last}${currentYr}`]
+          : [`${first}`, `${first}${currentYr}`, `${first}_dmail`]
+        setSuggestions(fallbacks)
+      }
+      setLoadingSuggestions(false)
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [name])
+
+  const selectSuggestion = (sug: string) => {
+    setSelectedSuggestion(sug)
+    setUsername(sug)
+    setMessage(null)
+    performCheck(sug)
+  }
+
+  const handleCustomUsernameChange = (val: string) => {
+    setSelectedSuggestion(null)
+    setMessage(null)
+    // Strip spaces immediately and enforce lower case
+    const sanitized = val.toLowerCase().replace(/\s+/g, "")
+    setUsername(sanitized)
+  }
 
   const createAccount = async () => {
-    if (!name || !password) {
-      setMessage({ text: "Please enter your name and choose a password.", type: "error" })
+    if (!name || !password || !username) {
+      setMessage({ text: "Please fill out all fields.", type: "error" })
       return
     }
 
     const nameRegex = /^[A-Za-z\s]+$/
-    if (!nameRegex.test(name)) {
+    if (!nameRegex.test(name.trim())) {
       setMessage({ text: "Name should contain only letters and spaces.", type: "error" })
       return
     }
@@ -48,50 +242,44 @@ export default function Signup() {
       return
     }
 
+    const fmt = validateFormat(username)
+    if (!fmt.valid || !usernameStatus.available) {
+      setMessage({ text: usernameStatus.message || "Please choose a valid available username.", type: "error" })
+      return
+    }
+
     setLoading(true)
-    setMessage({ text: "Checking availability in the decentralized mesh...", type: "success" })
+    setMessage({ text: "Checking final server availability...", type: "success" })
+
+    const cleanUser = username.trim().toLowerCase()
+    const generatedEmail = `${cleanUser}@${MAIL_DOMAIN}`
 
     try {
       const { db } = await import("@/utils/gun")
-      const cleanName = name.toLowerCase().replace(/\s+/g, "")
-      
-      // 🛡️ [Anti-Collision] Check if identifier is already taken
-      const exists = await new Promise<boolean>((res) => {
-        const timeout = setTimeout(() => res(false), 5000)
-        // We'll generate a tentative email to check
-        // Note: The actual email generation is randomized below, but we can check if the base name is heavily used or if specific patterns exist.
-        // Actually, let's just generate the email FIRST then check.
-        res(false) // Placeholder, real check below
-      })
-
       const { saveAccount } = await import("@/utils/accounts")
       const { generateSovereignIdentity } = await import("@/utils/identity")
 
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000)
-      const generatedEmail = `${cleanName}${randomSuffix}@${MAIL_DOMAIN}`
-
-      // REAL CHECK
-      const meshData = await new Promise<any>(res => {
-        const timeout = setTimeout(() => res(null), 1500)
-        db.getUser(generatedEmail, (data) => {
-          clearTimeout(timeout)
-          res(data)
-        }, true)
-      })
-
-      if (meshData && meshData.publicKey) {
-        setMessage({ text: "Identity collision detected. Please try again to generate a unique ID.", type: "error" })
-        setLoading(false)
-        return
+      // Backend Double-Check Validation
+      const backendUrl = process.env.NEXT_PUBLIC_GUN_RELAY || "http://localhost:8765"
+      try {
+        const verifyRes = await fetch(`${backendUrl}/api/auth/check-username?username=${encodeURIComponent(cleanUser)}`)
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json()
+          if (!verifyData.available) {
+            setMessage({ text: verifyData.message || "Username already taken on server.", type: "error" })
+            setLoading(false)
+            return
+          }
+        }
+      } catch {
+        // Continue if offline relay
       }
 
-      setMessage({ text: "Stretching keys for maximum security...", type: "success" })
-
-      // REVOLUTIONARY: Mathematical Key Generation
+      setMessage({ text: "Generating sovereign cryptographic key pair...", type: "success" })
       const identity = await generateSovereignIdentity(generatedEmail, password)
 
       const userObj = {
-        name,
+        name: name.trim(),
         email: generatedEmail,
         password,
         publicKey: identity.publicKey,
@@ -99,8 +287,18 @@ export default function Signup() {
         isDeterministic: true
       }
 
-      db.registerUser(userObj)
+      // Register with backend gateway & GunDB mesh
+      try {
+        await fetch(`${backendUrl}/api/gateway/register-auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userObj)
+        })
+      } catch {
+        // Mesh handles offline registration
+      }
 
+      db.registerUser(userObj)
 
       // Announce on Nostr Mesh
       import("@/utils/nostr").then(({ nostr }) => {
@@ -121,35 +319,44 @@ export default function Signup() {
       setMessage(null)
       setLoading(false)
       setShowSuccessModal(true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Signup Error:", err)
-      setMessage({ 
-        text: `Identity generation failed: ${err.message || "Unknown error"}.`, 
-        type: "error" 
+      const errMsg = err instanceof Error ? err.message : "Unknown error"
+      setMessage({
+        text: `Identity generation failed: ${errMsg}.`,
+        type: "error"
       })
       setLoading(false)
     }
   }
 
-  if (!mounted) return null;
+  if (!mounted) return null
+
+  const isFormValid =
+    name.trim().length > 0 &&
+    password.length >= 8 &&
+    username.trim().length >= 3 &&
+    usernameStatus.available === true &&
+    !usernameStatus.checking &&
+    !loading
 
   return (
     <div className="page-center">
-      <div className="auth-card">
-        <div className="auth-header">
-          <Logo size={48} layout="horizontal" showText={true} />
-          <div className="auth-header-content">
+      <div className="auth-card" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="auth-header" style={{ marginBottom: 0 }}>
+          <Logo size={44} layout="horizontal" showText={true} />
+          <div className="auth-header-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginTop: "14px" }}>
             <h2 className="auth-title">Create Account</h2>
-            <p className="auth-subtitle">
-              Generate your decentralized PGP keys and secure your communication via the EtherX network.
+            <p className="auth-subtitle" style={{ marginTop: "6px", fontSize: "13px" }}>
+              Choose your personal DMail address and generate secure PGP identity keys.
             </p>
           </div>
         </div>
 
         {message && (
           <div style={{
-            padding: "10px 14px", borderRadius: "8px", marginBottom: "16px",
-            fontSize: "14px", fontWeight: "500", textAlign: "center",
+            padding: "10px 14px", borderRadius: "8px", margin: 0,
+            fontSize: "13px", fontWeight: "500", textAlign: "center",
             background: message.type === "success" ? "rgba(76,175,110,0.12)" : "rgba(217,48,37,0.12)",
             color: message.type === "success" ? "#4caf6e" : "#e84234",
             border: `1px solid ${message.type === "success" ? "rgba(76,175,110,0.25)" : "rgba(217,48,37,0.25)"}`,
@@ -166,36 +373,178 @@ export default function Signup() {
           </div>
         )}
 
-        <div className="auth-form">
-          <input
-            className="auth-input"
-            placeholder="Full Name (letters only)"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setMessage(null) }}
-            disabled={loading}
-          />
-
-          <div style={{ position: "relative" }}>
+        <div className="auth-form" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Full Name */}
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", marginBottom: "6px" }}>
+              Full Name
+            </label>
             <input
-              type={showPassword ? "text" : "password"}
               className="auth-input"
-              placeholder="Strong password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setMessage(null) }}
-              onKeyDown={(e) => e.key === "Enter" && createAccount()}
+              placeholder="e.g. John Doe"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setMessage(null) }}
               disabled={loading}
-              style={{ paddingRight: "40px" }}
+              style={{ margin: 0 }}
             />
-            <span
-              onClick={() => setShowPassword(!showPassword)}
-              style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "var(--text-dim)", display: "flex" }}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </span>
           </div>
 
-          <div className="auth-button-row">
+          {/* Suggestions Pill Selector */}
+          {name.trim().length > 0 && (
+            <div style={{
+              background: "rgba(212, 175, 55, 0.04)",
+              border: "1px solid rgba(212, 175, 55, 0.15)",
+              borderRadius: "12px",
+              padding: "12px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--gold-mid)", fontWeight: "600" }}>
+                <Sparkles size={14} /> Available Suggestions
+                {loadingSuggestions && <Loader2 size={12} className="animate-spin" style={{ marginLeft: "auto" }} />}
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {suggestions.map((sug) => {
+                  const isSelected = selectedSuggestion === sug || username === sug
+                  return (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => selectSuggestion(sug)}
+                      style={{
+                        background: isSelected ? "rgba(212, 175, 55, 0.2)" : "var(--bg-input)",
+                        border: isSelected ? "1px solid var(--gold-mid)" : "1px solid var(--border-color)",
+                        borderRadius: "20px",
+                        padding: "6px 14px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: isSelected ? "var(--gold-light)" : "var(--text-bright)",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      <span>{sug}@{MAIL_DOMAIN}</span>
+                      {isSelected && <Check size={12} color="var(--gold-mid)" />}
+                    </button>
+                  )
+                })}
+                {suggestions.length === 0 && !loadingSuggestions && (
+                  <span style={{ fontSize: "12px", color: "var(--text-dim)" }}>Type your name to get available suggestions.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Custom DMail Username Input with Domain Badge */}
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", marginBottom: "6px" }}>
+              DMail Address
+            </label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                className="auth-input"
+                placeholder="choose-username"
+                value={username}
+                onChange={(e) => handleCustomUsernameChange(e.target.value)}
+                disabled={loading}
+                style={{
+                  margin: 0,
+                  paddingRight: "160px",
+                  borderColor:
+                    usernameStatus.available === true
+                      ? "#4caf6e"
+                      : usernameStatus.available === false
+                      ? "#e84234"
+                      : undefined
+                }}
+              />
+              <span style={{
+                position: "absolute",
+                right: "12px",
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "var(--gold-mid)",
+                background: "rgba(212, 175, 55, 0.08)",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid rgba(212, 175, 55, 0.2)",
+                pointerEvents: "none",
+                userSelect: "none"
+              }}>
+                @{MAIL_DOMAIN}
+              </span>
+            </div>
+
+            {/* Validation Feedback Status */}
+            {username.trim().length > 0 && (
+              <div style={{ marginTop: "6px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                {usernameStatus.checking ? (
+                  <span style={{ color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Loader2 size={13} className="animate-spin" /> Checking availability...
+                  </span>
+                ) : usernameStatus.available === true ? (
+                  <span style={{ color: "#4caf6e", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Check size={14} /> ✅ {username}@{MAIL_DOMAIN} is available!
+                  </span>
+                ) : usernameStatus.status === "taken" ? (
+                  <span style={{ color: "#e84234", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <X size={14} /> ❌ Username is already taken
+                  </span>
+                ) : usernameStatus.status === "reserved" ? (
+                  <span style={{ color: "#e6a23c", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <AlertTriangle size={14} /> ⚠ Reserved system username
+                  </span>
+                ) : usernameStatus.status === "invalid" ? (
+                  <span style={{ color: "#e6a23c", fontWeight: "500", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <AlertTriangle size={14} /> ⚠ {usernameStatus.message || "Invalid format"}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", marginBottom: "6px" }}>
+              Password
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                className="auth-input"
+                placeholder="Min 8 chars (uppercase, lowercase, number, symbol)"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setMessage(null) }}
+                onKeyDown={(e) => e.key === "Enter" && isFormValid && createAccount()}
+                disabled={loading}
+                style={{ margin: 0, paddingRight: "40px" }}
+              />
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                  color: "var(--text-dim)",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </span>
+            </div>
+          </div>
+
+          <div className="auth-button-row" style={{ marginTop: "12px" }}>
             <button
+              type="button"
               onClick={() => router.push("/login")}
               style={{
                 background: "none", border: "none",
@@ -205,97 +554,166 @@ export default function Signup() {
               }}
               onMouseEnter={(e) => e.currentTarget.style.color = "var(--gold-mid)"}
               onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
-            >Back to Sign In</button>
+            >
+              Back to Sign In
+            </button>
             <button
-              className="btn" onClick={createAccount} disabled={loading}
-              style={{ padding: "12px 32px", fontSize: "14px", opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
-            >{loading ? "Generating..." : "Create Identity"}</button>
+              className="btn"
+              type="button"
+              onClick={createAccount}
+              disabled={!isFormValid}
+              style={{
+                padding: "12px 32px",
+                fontSize: "14px",
+                opacity: isFormValid ? 1 : 0.5,
+                cursor: isFormValid ? "pointer" : "not-allowed"
+              }}
+            >
+              {loading ? "Generating..." : "Create Identity"}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: "100%", maxWidth: "480px", textAlign: "center" }}>
-            <div style={{ color: "var(--gold-mid)", marginBottom: "16px" }}>
-              <CheckCircle size={48} />
+        <div className="modal-overlay" style={{ backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="modal-content" style={{ width: "100%", maxWidth: "520px", padding: "32px", borderRadius: "24px", textAlign: "center" }}>
+            <div style={{ color: "var(--gold-mid)", marginBottom: "16px", display: "inline-flex", alignItems: "center", justifyContent: "center", width: "64px", height: "64px", borderRadius: "50%", background: "rgba(212, 175, 55, 0.08)", border: "1px solid rgba(212, 175, 55, 0.2)" }}>
+              <CheckCircle size={32} />
             </div>
             <h3 style={{
               fontFamily: "'Cinzel', serif", fontSize: "24px", color: "var(--gold-mid)",
               marginBottom: "12px", letterSpacing: "1px"
             }}>Identity Registered!</h3>
-            <p style={{ marginBottom: "20px", color: "var(--text-bright)", fontSize: "15px" }}>
+            <p style={{ marginBottom: "24px", color: "var(--text-bright)", fontSize: "15px" }}>
               Welcome to the network, <strong style={{ color: "var(--gold-mid)", fontSize: "16px" }}>{name}</strong>!
             </p>
-            <p style={{ marginBottom: "12px", color: "var(--text-muted)", fontSize: "13px" }}>Your universal identifier is:</p>
+
+            <p style={{ marginBottom: "8px", color: "var(--text-muted)", fontSize: "13px", textAlign: "left", fontWeight: "600" }}>Your universal identifier:</p>
             <div style={{
-              background: "var(--bg-panel)", border: "1px solid var(--gold-mid)",
-              borderRadius: "10px", padding: "14px 18px", marginBottom: "16px",
+              background: "var(--bg-panel)", border: "1px solid var(--border-gold)",
+              borderRadius: "12px", padding: "14px 18px", marginBottom: "20px",
               display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px",
+              boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
             }}>
               <span style={{
                 fontFamily: "Courier New, monospace", fontSize: "13px",
                 color: "var(--gold-light)", fontWeight: "600", wordBreak: "break-all",
               }}>{createdEmail}</span>
               <button
+                type="button"
                 onClick={async () => {
-                   const { copyToClipboard } = await import("@/utils/clipboard");
-                   copyToClipboard(createdEmail);
+                  const { copyToClipboard } = await import("@/utils/clipboard")
+                  copyToClipboard(createdEmail)
+                  setCopiedEmail(true)
+                  setTimeout(() => setCopiedEmail(false), 2000)
                 }}
                 style={{
-                  background: "none", border: "1px solid var(--gold-mid)", borderRadius: "6px",
-                  padding: "4px 10px", cursor: "pointer", color: "var(--gold-mid)",
+                  background: copiedEmail ? "rgba(76,175,110,0.15)" : "none",
+                  border: copiedEmail ? "1px solid #4caf6e" : "1px solid var(--gold-mid)",
+                  borderRadius: "8px",
+                  padding: "6px 12px", cursor: "pointer",
+                  color: copiedEmail ? "#4caf6e" : "var(--gold-mid)",
                   fontSize: "12px", whiteSpace: "nowrap", flexShrink: 0,
+                  fontWeight: "600",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
                 }}
               >
-                <Clipboard size={14} style={{ marginRight: "4px" }} /> Copy
+                <Clipboard size={14} /> {copiedEmail ? "Copied!" : "Copy"}
               </button>
             </div>
 
-            <div style={{ 
-              background: "rgba(212, 175, 55, 0.05)", 
-              border: "1px dashed var(--gold-mid)", 
-              borderRadius: "10px", 
-              padding: "16px",
-              marginBottom: "20px"
+            <div style={{
+              background: "rgba(212, 175, 55, 0.03)",
+              border: "1px solid var(--border-gold)",
+              borderRadius: "14px",
+              padding: "20px",
+              marginBottom: "20px",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.2)"
             }}>
-              <p style={{ fontSize: "11px", color: "var(--gold-mid)", fontWeight: "700", textTransform: "uppercase", marginBottom: "8px", letterSpacing: "1px", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
-                <ShieldCheck size={14} /> Recovery Phrase (Secure Vault)
+              <p style={{ fontSize: "12px", color: "var(--gold-mid)", fontWeight: "700", textTransform: "uppercase", marginBottom: "12px", letterSpacing: "1px", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+                <ShieldCheck size={16} /> Recovery Phrase (Secure Vault)
               </p>
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(3, 1fr)", 
-                gap: "8px",
-                textAlign: "left"
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "10px",
+                textAlign: "left",
+                background: "rgba(0,0,0,0.2)",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid rgba(212, 175, 55, 0.1)"
               }}>
                 {mnemonic.split(" ").map((word, i) => (
-                  <div key={i} style={{ fontSize: "12px", color: "var(--text-bright)" }}>
-                    <span style={{ color: "var(--text-dim)", marginRight: "4px" }}>{i+1}.</span>
+                  <div key={i} style={{ fontSize: "13px", color: "var(--text-bright)", fontFamily: "monospace" }}>
+                    <span style={{ color: "var(--text-dim)", marginRight: "6px" }}>{i + 1}.</span>
                     {word}
                   </div>
                 ))}
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={async () => {
-                  const { copyToClipboard } = await import("@/utils/clipboard");
-                  copyToClipboard(mnemonic);
+                  const { copyToClipboard } = await import("@/utils/clipboard")
+                  copyToClipboard(mnemonic)
+                  setCopiedMnemonic(true)
+                  setTimeout(() => setCopiedMnemonic(false), 2000)
                 }}
-                style={{ 
-                  marginTop: "12px", background: "none", border: "none", color: "var(--gold-mid)", 
-                  fontSize: "11px", cursor: "pointer", textDecoration: "underline" 
+                style={{
+                  marginTop: "16px",
+                  background: copiedMnemonic ? "rgba(76,175,110,0.15)" : "rgba(212, 175, 55, 0.08)",
+                  border: copiedMnemonic ? "1px solid #4caf6e" : "1px solid var(--border-gold)",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  color: copiedMnemonic ? "#4caf6e" : "var(--gold-mid)",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
                 }}
-              >Copy Recovery Phrase</button>
+              >
+                <Clipboard size={14} /> {copiedMnemonic ? "Recovery Phrase Copied!" : "Copy Recovery Phrase"}
+              </button>
             </div>
 
-            <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
-              <ShieldAlert size={14} color="#e84234" /> Write down your phrase. You can use it to recover your account on any device.
-            </p>
-            <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+            <div style={{
+              background: "rgba(232, 66, 52, 0.08)",
+              border: "1px solid rgba(232, 66, 52, 0.2)",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+              textAlign: "left"
+            }}>
+              <ShieldAlert size={18} color="#e84234" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <p style={{ fontSize: "12px", fontWeight: "700", color: "#e84234", marginBottom: "4px" }}>
+                  Action Required: Save Credentials Securely
+                </p>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, lineHeight: "1.5" }}>
+                  Write down your recovery phrase and backup your identifier. There are no centralized servers to recover your password if lost.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center" }}>
               <button
                 className="btn"
+                type="button"
                 onClick={() => { setShowSuccessModal(false); window.location.href = `/login?email=${encodeURIComponent(createdEmail)}` }}
-              >Proceed to Sign In <ArrowRight size={16} style={{ marginLeft: "8px" }} /></button>
+                style={{ padding: "12px 32px", fontSize: "14px", display: "inline-flex", alignItems: "center", gap: "8px" }}
+              >
+                Proceed to Sign In <ArrowRight size={16} />
+              </button>
             </div>
           </div>
         </div>

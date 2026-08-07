@@ -65,108 +65,6 @@ button, input, textarea, select {
   --bg-vault-input:  rgba(255,255,255,0.05);
 }
 
-/* =============================================
-   LIGHT MODE
-   ============================================= */
-
-[data-theme="light"] {
-  /* ── EtherX Gold Palette (Tailored for Light Surfaces) ── */
-  --gold-light:      #D9A71E;   /* Bright gold accent */
-  --gold-mid:        #A0720A;   /* Primary warm gold accent */
-  --gold-rich:       #8A5E00;   /* Deep rich gold */
-  --gold-deep:       #5C3D00;   /* Bronze accent */
-  --gold-shine:      #FFFBEB;   /* Subtlest gold tint */
-
-  /* ── Surface Elevation & Hierarchy (SaaS Warm Palette) ── */
-  --bg-body:         #F9F8F5;   /* Surface 0: Warm ivory page background */
-  --bg-sidebar:      #F4F1EA;   /* Surface 1: Soft warm neutral sidebar background */
-  --bg-sidebar-end:  #F9F8F5;
-  --bg-card:         #FFFFFF;   /* Surface 2: Crisp white floating cards & mail list */
-  --bg-panel:        #FFFFFF;   /* Surface 2: Crisp white main content panel */
-  --bg-header:       #FFFFFF;   /* Surface 2: Floating clean header */
-  --bg-header-end:   #FAF8F5;
-  --bg-compose-hdr:  #F5F2EB;   /* Surface 1: Soft warm header for compose & modals */
-  --bg-input:        #FFFFFF;   /* Input field background */
-  --bg-deep:         #EFECE4;   /* Surface -1: Recessed warm containers, attachment chips */
-  --bg-hover:        #F2EEE5;   /* Warm tactile hover state */
-
-  /* ── Crisp Warm Borders ── */
-  --border-color:    #E6E1D6;   /* Visible but soft warm divider */
-  --border-gold:     rgba(160, 114, 10, 0.22); /* Subtle gold border tint */
-
-  /* ── Typography & Hierarchy (Deep Slate Charcoal) ── */
-  --text-bright:     #1E1915;   /* Primary dark charcoal text (readable, non-glaring) */
-  --text-muted:      #4A433D;   /* Secondary slate charcoal for body copy */
-  --text-dim:        #7C7369;   /* Muted warm gray for timestamps, metadata, captions */
-
-  /* ── Elevation Shadows & Glows ── */
-  --shadow-deep:     0 20px 50px rgba(40, 30, 10, 0.14), 0 4px 12px rgba(40, 30, 10, 0.06);
-  --shadow-header:   0 1px 3px rgba(40, 30, 10, 0.04), 0 4px 12px rgba(40, 30, 10, 0.02);
-  --glow-gold:       0 0 16px rgba(160, 114, 10, 0.18), 0 0 32px rgba(160, 114, 10, 0.06);
-  --glow-subtle:     0 0 10px rgba(160, 114, 10, 0.1);
-  --text-glow-gold:  none;      /* Glow effects disabled on light text */
-
-  /* ── Mail List Row Tokens ── */
-  --mail-row-border: #EDE9DF;
-  --mail-row-hover-no-click: #F2EEE5;
-
-  /* ── Modals & Overlays ── */
-  --modal-overlay:   rgba(238, 234, 224, 0.88);
-  --key-private-bg:  #FAF8F5;
-  --bg-vault:        #FAF8F5;
-  --bg-vault-input:  #EFECE4;
-}
-
-/* =============================================
-   THEME TOGGLE BUTTON
-   ============================================= */
-
-.theme-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-
-.toggle-track {
-  position: relative;
-  width: 64px;
-  height: 30px;
-  background: var(--bg-panel);
-  border: 1px solid var(--gold-mid);
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 6px;
-  box-shadow: var(--glow-subtle);
-  transition: background 0.3s, box-shadow 0.3s;
-}
-
-.toggle-track:hover {
-  box-shadow: var(--glow-gold);
-}
-
-.toggle-icon-left,
-.toggle-icon-right {
-  font-size: 13px;
-  line-height: 1;
-  z-index: 1;
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 3px;
-  width: 22px;
-  height: 22px;
-  background: linear-gradient(135deg, var(--gold-rich), var(--gold-light));
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(197,160,89,0.6);
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toggle-thumb.left  { left: 4px; }
-.toggle-thumb.right { left: 38px; }
 
 /* =============================================
    KEYFRAMES
@@ -283,6 +181,34 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(197,160,89,0.1) transparent;
+}
+
+/* Account Switcher Custom Scrollbar */
+.account-switcher-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.4) transparent;
+}
+
+.account-switcher-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.account-switcher-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.account-switcher-scroll::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.account-switcher-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.7);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
 }
 
 /* =============================================
@@ -2357,244 +2283,6 @@ body {
   transform: translateY(0);
 }
 
-/* =============================================
-   LIGHT MODE COMPONENT OVERRIDES (PREMIUM SAAS)
-   Scoped strictly to [data-theme="light"]
-   Dark mode is completely untouched.
-   ============================================= */
-
-/* ── Header ── */
-[data-theme="light"] .header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E6E1D6;
-  box-shadow: 0 1px 3px rgba(40, 30, 10, 0.04), 0 1px 2px rgba(40, 30, 10, 0.02);
-}
-
-[data-theme="light"] .header::after {
-  background: linear-gradient(90deg, transparent, #D9A71E, #A0720A, #D9A71E, transparent);
-  opacity: 0.35;
-}
-
-/* ── Sidebar (Linear/Vercel SaaS Surface 1) ── */
-[data-theme="light"] .sidebar {
-  background: #F4F1EA;
-  border-right: 1px solid #E6E1D6;
-  padding: 16px 12px;
-}
-
-[data-theme="light"] .compose-btn {
-  background: linear-gradient(135deg, #A0720A 0%, #C8960C 100%);
-  color: #FFFFFF !important;
-  text-shadow: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(160, 114, 10, 0.28);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="light"] .compose-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(160, 114, 10, 0.38);
-}
-
-[data-theme="light"] .menu-link {
-  color: #4A433D;
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin: 2px 0;
-  font-weight: 500;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="light"] .menu-link:hover {
-  background: #EFEBE2;
-  color: #1E1915;
-}
-
-[data-theme="light"] .menu-link.active {
-  background: rgba(160, 114, 10, 0.09);
-  color: #A0720A;
-  font-weight: 700;
-  border-left: 3px solid #A0720A;
-}
-
-/* ── Search Bar ── */
-[data-theme="light"] .search-container {
-  background: #F9F8F5;
-  border: 1px solid #E6E1D6;
-  border-radius: 12px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="light"] .search-container:focus-within {
-  background: #FFFFFF;
-  border-color: #A0720A;
-  box-shadow: 0 0 0 3px rgba(160, 114, 10, 0.12), 0 2px 8px rgba(40, 30, 10, 0.04);
-}
-
-[data-theme="light"] .search-input {
-  color: #1E1915;
-}
-
-[data-theme="light"] .search-input::placeholder {
-  color: #9E9589;
-}
-
-/* ── Mail List Rows & Cards ── */
-[data-theme="light"] .mail-row {
-  border-bottom: 1px solid #EDE9DF;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 8px;
-  margin: 1px 4px;
-}
-
-[data-theme="light"] .mail-row:hover {
-  background: #F2EEE5 !important;
-  transform: translateY(-0.5px);
-}
-
-[data-theme="light"] .mail-row.selected {
-  background: rgba(160, 114, 10, 0.07) !important;
-  border-left: 3px solid #A0720A;
-}
-
-[data-theme="light"] .mail-sender {
-  color: #1E1915;
-}
-
-[data-theme="light"] .mail-subject {
-  color: #1E1915;
-}
-
-[data-theme="light"] .mail-snippet {
-  color: #7C7369;
-}
-
-[data-theme="light"] .mail-date {
-  color: #7C7369;
-}
-
-/* ── Folder Toolbar ── */
-[data-theme="light"] .folder-toolbar {
-  background: #F4F1EA;
-  border-bottom: 1px solid #E6E1D6;
-}
-
-[data-theme="light"] .toolbar-btn {
-  color: #7C7369;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-}
-
-[data-theme="light"] .toolbar-btn:hover {
-  background: #EFEBE2;
-  color: #A0720A;
-}
-
-/* ── Compose Window Premium SaaS Elevation ── */
-[data-theme="light"] .compose-window-outer,
-[data-theme="light"] [style*="position: fixed"][style*="zIndex: 1000"] {
-  background: #FFFFFF !important;
-  border: 1px solid #E6E1D6 !important;
-  border-top: 3px solid #A0720A !important;
-  border-radius: 14px !important;
-  box-shadow: 0 20px 50px rgba(40, 30, 10, 0.16), 0 4px 12px rgba(40, 30, 10, 0.08) !important;
-}
-
-/* ── Button System Standard ── */
-[data-theme="light"] .btn {
-  background: linear-gradient(135deg, #A0720A 0%, #C8960C 100%);
-  color: #FFFFFF;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(160, 114, 10, 0.22);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="light"] .btn:hover {
-  box-shadow: 0 4px 14px rgba(160, 114, 10, 0.32);
-  transform: translateY(-1px);
-}
-
-[data-theme="light"] .btn-secondary {
-  background: #EFEBE2;
-  border: 1px solid #E6E1D6;
-  color: #4A433D;
-  border-radius: 10px;
-  transition: all 0.15s ease;
-}
-
-[data-theme="light"] .btn-secondary:hover {
-  background: #E5E0D4;
-  border-color: #A0720A;
-  color: #1E1915;
-}
-
-/* ── Inputs & Form Elements ── */
-[data-theme="light"] .auth-input,
-[data-theme="light"] input[type="text"],
-[data-theme="light"] input[type="email"],
-[data-theme="light"] input[type="password"] {
-  color: #1E1915;
-}
-
-[data-theme="light"] .auth-input {
-  background: #FFFFFF;
-  border: 1px solid #E6E1D6;
-  border-radius: 10px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="light"] .auth-input:focus {
-  border-color: #A0720A;
-  box-shadow: 0 0 0 3px rgba(160, 114, 10, 0.12);
-}
-
-/* ── Modals & Dialogs ── */
-[data-theme="light"] .modal-content {
-  background: #FFFFFF;
-  border: 1px solid #E6E1D6;
-  border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(40, 30, 10, 0.18);
-}
-
-/* ── Attachment Cards ── */
-[data-theme="light"] .attachment-card {
-  background: #F9F8F5;
-  border: 1px solid #E6E1D6;
-  border-radius: 10px;
-  transition: all 0.15s ease;
-}
-
-[data-theme="light"] .attachment-card:hover {
-  background: #F2EEE5;
-  border-color: #A0720A;
-}
-
-/* ── Scrollbars ── */
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(160, 114, 10, 0.18);
-  border-radius: 4px;
-}
-
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(160, 114, 10, 0.35);
-}
-
-/* ── Navigation Count Badges ── */
-[data-theme="light"] .nav-count {
-  background: rgba(160, 114, 10, 0.1);
-  color: #A0720A;
-  font-weight: 700;
-  border-radius: 12px;
-  padding: 2px 8px;
-}
-
-/* ── Page Header ── */
-[data-theme="light"] .page-header {
-  background: #F4F1EA;
-  border-bottom: 1px solid #E6E1D6;
-}
 
 /* =============================================
    GMAIL MOBILE RESPONSIVE DESIGN SYSTEM
@@ -2770,3 +2458,233 @@ body {
 }
 
 
+/* =============================================
+   RESPONSIVE BUTTON SYSTEM
+   ============================================= */
+
+/* Base: ensure buttons never overflow their container */
+.btn,
+.btn-secondary,
+.btn-send,
+.send-btn,
+.compose-btn,
+.logout-btn,
+.toolbar-btn,
+.bulk-btn,
+.labeled-action-btn {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon + text buttons aligned */
+.btn,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Compose button fills sidebar width */
+.compose-btn {
+  width: 100% !important;
+  box-sizing: border-box;
+  justify-content: flex-start;
+}
+
+/* Modal action buttons wrap on small screens */
+.modal-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* =============================================
+   RESPONSIVE BUTTON TOUCH TARGETS — MOBILE
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* All interactive buttons get minimum 44px touch target */
+  button,
+  .btn,
+  .btn-secondary,
+  .btn-send,
+  .send-btn,
+  .bulk-btn,
+  .action-link,
+  .toolbar-btn,
+  .empty-spam-btn,
+  .hover-icon-btn,
+  .chromeless-btn,
+  .labeled-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Compose button */
+  .compose-btn {
+    padding: 12px 18px !important;
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  /* Logout button consistent sizing */
+  .logout-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Modal actions stack */
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .btn,
+  .modal-actions .btn-secondary,
+  .modal-actions button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Settings left nav: shrink on tablet */
+  .settings-left-nav {
+    width: 160px !important;
+    padding: 16px 8px !important;
+  }
+
+  .settings-left-nav button {
+    font-size: 12px !important;
+    padding: 9px 10px !important;
+  }
+
+  /* Settings content panel */
+  .settings-content-panel {
+    padding: 16px 14px !important;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Inline button rows in settings panels wrap */
+  .settings-btn-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-btn-row button {
+    flex: 1 1 auto;
+    min-width: 100px;
+    justify-content: center;
+  }
+}
+
+/* =============================================
+   SETTINGS PAGE: Grid inputs stack on mobile
+   ============================================= */
+
+@media (max-width: 600px) {
+  /* Very small screens: collapse settings nav to icon-only */
+  .settings-left-nav {
+    width: 48px !important;
+    padding: 16px 4px !important;
+    overflow: hidden;
+  }
+
+  .settings-left-nav .settings-nav-text {
+    display: none !important;
+  }
+
+  .settings-left-nav button {
+    padding: 10px !important;
+    justify-content: center !important;
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 8px !important;
+  }
+
+  /* Settings section headings */
+  .mail-detail-subject {
+    font-size: 18px !important;
+    word-break: break-word;
+  }
+
+  /* Auth button row stacks */
+  .auth-button-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .auth-button-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Bulk action bar wraps */
+  .bulk-action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .bulk-btn {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+}
+
+/* =============================================
+   HEADER RESPONSIVE
+   ============================================= */
+
+@media (max-width: 480px) {
+  .header-right {
+    gap: 8px !important;
+    min-width: auto !important;
+  }
+
+  .header-left {
+    min-width: auto !important;
+    gap: 8px !important;
+  }
+
+  .header-middle {
+    max-width: calc(100% - 120px);
+  }
+
+  .mail-detail-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* =============================================
+   MOBILE HEADER — Search icon + Profile avatar
+   ============================================= */
+
+/* On mobile: hide full search bar, show search icon */
+@media (max-width: 768px) {
+  .header-search-desktop {
+    display: none !important;
+  }
+
+  .header-search-mobile-btn {
+    display: flex !important;
+  }
+
+  /* Hide desktop-only header items (status badge, shortcuts, settings, bell) */
+  .header-desktop-only {
+    display: none !important;
+  }
+
+  /* Shrink left & right padding on mobile header */
+  .header-right {
+    flex: 0 !important;
+    gap: 4px !important;
+    min-width: auto !important;
+    padding-left: 0 !important;
+  }
+}

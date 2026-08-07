@@ -3,7 +3,7 @@
 import {
   Inbox, Send, FileText, AlertTriangle, Trash2,
   Star, Mail, Archive, Users, Settings,
-  Plus, ChevronDown, Database, LogOut, Tag, UserPlus, Clock
+  Plus, ChevronDown, LogOut, Tag, UserPlus, Clock
 } from "lucide-react"
 
 import { useEffect, useState, memo } from "react"
@@ -12,7 +12,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { getCounts, subscribe } from "@/utils/mailStore"
 import { getLabels, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
-import NetworkStatus from "@/components/NetworkStatus"
+// NetworkStatus is used internally but not shown in the sidebar UI
 import Logo from "@/components/Logo"
 
 interface SidebarProps {
@@ -281,13 +281,6 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
 
           <div className="nav-section-label" style={{ marginTop: "24px" }}>More</div>
 
-          <Link href="/dashboard/ipfs" onClick={handleNavClick} className={`menu-link ${isActive("ipfs") ? "active" : ""}`}>
-            <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-              <Database size={20} style={{ opacity: isActive("ipfs") ? 1 : 0.7 }} />
-              <span style={{ flex: 1, fontSize: "14px" }}>IPFS Explorer</span>
-            </div>
-          </Link>
-
           <Link href="/dashboard/contacts" onClick={handleNavClick} className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Users size={20} style={{ opacity: isActive("contacts") ? 1 : 0.7 }} />
@@ -305,9 +298,6 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
       </div>
 
       <div style={{ marginTop: "auto", paddingTop: "16px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
-          <NetworkStatus />
-        </div>
 
         <div className="sidebar-user">
           <div className="sidebar-avatar">

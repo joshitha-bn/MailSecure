@@ -206,12 +206,23 @@ function InboxPageContent() {
 
   const handleUnlock = async (overridePass?: string) => {
     const pass = overridePass || unlockPassword
-    if (!pass) return
+    if (!pass || !pass.trim()) {
+      setUnlockError("Incorrect password. Please enter your account password.")
+      return
+    }
     setUnlocking(true)
     setUnlockError("")
     
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}")
+      
+      // 🛡️ Authenticate entered password against user credentials
+      if (user.password && pass !== user.password) {
+        setUnlockError("Incorrect password. Please enter your account password.")
+        setUnlocking(false)
+        return
+      }
+
       const { signData } = await import("@/utils/gun")
       
       // 1. [Standard Path] Attempt to unlock using the cached/synced private key
@@ -224,43 +235,48 @@ function InboxPageContent() {
           sessionStorage.setItem("vault_pass", pass)
         }
         setIsUnlocked(true)
-        console.log("🔓 [Vault] Inbox unlocked successfully via cached key.")
+        console.log("🔓 [Vault] Inbox unlocked successfully via authenticated credentials.")
       } catch (e: any) {
-        console.warn("⚠️ [Vault] Primary unlock failed. Attempting Sovereign Recovery...", e.message || e)
+        console.warn("⚠️ [Vault] Primary unlock failed.", e.message || e)
         
-        // 2. [Sovereign Path] Deterministic Recovery
-        // If the synced key is corrupted or encrypted with an old password, we re-derive it.
-        try {
-          const { generateSovereignIdentity } = await import("@/utils/identity")
-          const identity = await generateSovereignIdentity(user.email, pass)
-          
-          // Verify the newly derived key works
-          await signData("unlock_inbox", identity.privateKey, pass)
-          
-          console.log("✅ [Vault] Sovereign Recovery successful. Repairing local identity...")
-          const updatedUser = { 
-            ...user, 
-            privateKey: identity.privateKey, 
-            publicKey: identity.publicKey,
-            did: identity.did,
-            fastPublicKey: identity.fastPublicKey,
-            fastPrivateKey: identity.fastPrivateKey
+        // 2. [Sovereign Path] Deterministic Recovery ONLY for verified password
+        if (user.password && pass === user.password) {
+          try {
+            const { generateSovereignIdentity } = await import("@/utils/identity")
+            const identity = await generateSovereignIdentity(user.email, pass)
+            
+            await signData("unlock_inbox", identity.privateKey, pass)
+            
+            console.log("✅ [Vault] Sovereign Recovery successful. Repairing local identity...")
+            const updatedUser = { 
+              ...user, 
+              privateKey: identity.privateKey, 
+              publicKey: identity.publicKey,
+              did: identity.did,
+              fastPublicKey: identity.fastPublicKey,
+              fastPrivateKey: identity.fastPrivateKey
+            }
+            localStorage.setItem("user", JSON.stringify(updatedUser))
+            
+            const { db } = await import("@/utils/gun")
+            db.registerUser(updatedUser)
+            
+            setSessionPassword(pass)
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem("inbox_unlocked", "true")
+              sessionStorage.setItem("vault_pass", pass)
+            }
+            setIsUnlocked(true)
+          } catch (recoveryErr: any) {
+            console.error("❌ [Vault] Sovereign Recovery failed:", recoveryErr.message || recoveryErr)
+            if (!overridePass) setUnlockError("Incorrect password. Please enter your account password.")
           }
-          localStorage.setItem("user", JSON.stringify(updatedUser))
-          
-          // Sync healthy key to mesh
-          const { db } = await import("@/utils/gun")
-          db.registerUser(updatedUser)
-          
-          setSessionPassword(pass)
-          setIsUnlocked(true)
-        } catch (recoveryErr: any) {
-          console.error("❌ [Vault] Sovereign Recovery failed:", recoveryErr.message || recoveryErr)
-          if (!overridePass) setUnlockError("Invalid Vault Passphrase")
+        } else {
+          if (!overridePass) setUnlockError("Incorrect password. Please enter your account password.")
         }
       }
     } catch (err) {
-      setUnlockError("System error during unlock")
+      setUnlockError("Incorrect password. Please enter your account password.")
     } finally {
       setUnlocking(false)
     }

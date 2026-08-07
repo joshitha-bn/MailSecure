@@ -127,7 +127,17 @@ export default function ConversationView({
   }
 
   const handleDecrypt = async (msg: Message, pass: string) => {
+    if (!pass || !pass.trim()) {
+      alert("Incorrect password. Please enter your account password.")
+      return
+    }
     if (!msg.message || !msg.message.includes("-----BEGIN PGP MESSAGE-----")) return
+
+    // 🛡️ Validate entered password against user credentials
+    if (user.password && pass !== user.password) {
+      alert("Incorrect password. Please enter your account password.")
+      return
+    }
 
     setIsDecrypting(prev => ({ ...prev, [msg.id]: true }))
     try {
@@ -143,7 +153,7 @@ export default function ConversationView({
       setShowPassRequest(false)
       setPassInput("")
     } catch (err) {
-      alert("Decryption failed. Please check your password.")
+      alert("Incorrect password. Please enter your account password.")
     } finally {
       setIsDecrypting(prev => ({ ...prev, [msg.id]: false }))
     }

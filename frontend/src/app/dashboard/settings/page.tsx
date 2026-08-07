@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react"
 import { generateKeyPair, checkGunServer } from "@/utils/gun"
 import { 
   Settings, Lock, Link as LinkIcon, Tag, Globe, 
-  Moon, Sun, CheckCircle, Edit2, PlusCircle, 
+  CheckCircle, Edit2, PlusCircle, 
   Trash2, Key, Eye, EyeOff, Shield, 
   Download, Folder, FolderOpen, RefreshCw, 
   CheckCircle2, XCircle, AlertCircle, Sparkles,
-  ArrowRight, Mail, Database, Palette, Layout, Wallet, Search, Send
+  ArrowRight, Mail, Database, Layout, Wallet, Search, Send
 } from "lucide-react"
 import BlockchainVerify from "@/components/BlockchainVerify"
 import { getLabels, saveLabel, deleteLabel, createId, PRESET_COLORS, type Label } from "@/utils/labelStore"
@@ -22,7 +22,6 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>("general")
 
   // ── General ──
-  const [theme, setTheme] = useState("dark")
   const [inboxLayout, setInboxLayout] = useState("comfortable")
   const [emailPreview, setEmailPreview] = useState("2lines")
   const [generalSaved, setGeneralSaved] = useState(false)
@@ -79,7 +78,6 @@ export default function SettingsPage() {
     const u = JSON.parse(localStorage.getItem("user") || "{}")
     setUser(u)
 
-    setTheme(localStorage.getItem("theme") || "dark")
     setInboxLayout(localStorage.getItem("settings_inboxLayout") || "comfortable")
     setEmailPreview(localStorage.getItem("settings_emailPreview") || "2lines")
     setLabels(getLabels(u.email || ""))
@@ -139,19 +137,11 @@ export default function SettingsPage() {
 
   // ── General ──────────────────────────────────────────────────
   const saveGeneralSettings = () => {
-    localStorage.setItem("theme", theme)
     localStorage.setItem("settings_inboxLayout", inboxLayout)
     localStorage.setItem("settings_emailPreview", emailPreview)
-    document.documentElement.setAttribute("data-theme", theme)
     window.dispatchEvent(new Event("storage"))
     setGeneralSaved(true)
     setTimeout(() => setGeneralSaved(false), 3000)
-  }
-
-  const handleThemeChange = (val: string) => {
-    setTheme(val)
-    document.documentElement.setAttribute("data-theme", val)
-    localStorage.setItem("theme", val)
   }
 
   // ── Security ─────────────────────────────────────────────────
@@ -349,6 +339,10 @@ export default function SettingsPage() {
     borderLeft: activeSection === s ? "3px solid var(--gold-mid)" : "3px solid transparent",
     color: activeSection === s ? "var(--gold-mid)" : "var(--text-bright)",
     transition: "all 0.15s ease",
+    display: "flex" as const,
+    alignItems: "center" as const,
+    overflow: "hidden" as const,
+    whiteSpace: "nowrap" as const,
   })
 
   const card = {
@@ -408,14 +402,15 @@ export default function SettingsPage() {
   // ── Helpers ──
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", minWidth: 0 }}>
 
       {/* ── Left nav ── */}
-      <div style={{
+      <div className="settings-left-nav" style={{
         width: "200px", flexShrink: 0, padding: "20px 12px",
         borderRight: "1px solid var(--border-gold)", overflowY: "auto",
+        boxSizing: "border-box",
       }}>
-        <div style={{
+        <div className="settings-nav-text" style={{
           fontSize: "9px", fontWeight: "800", color: "var(--text-muted)",
           letterSpacing: "1.5px", textTransform: "uppercase",
           padding: "0 4px", marginBottom: "8px",
@@ -430,13 +425,14 @@ export default function SettingsPage() {
           { key: "hybridGateway", icon: <Mail size={14} />,      label: "Hybrid Gateway" },
         ] as { key: Section; icon: React.ReactNode; label: string }[]).map((s) => (
           <button key={s.key} style={sectionBtn(s.key)} onClick={() => setActiveSection(s.key)}>
-            <span style={{ marginRight: "10px", display: "inline-flex", alignItems: "center" }}>{s.icon}</span>{s.label}
+            <span style={{ marginRight: "10px", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>{s.icon}</span>
+            <span className="settings-nav-text" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.label}</span>
           </button>
         ))}
       </div>
 
       {/* ── Content ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+      <div className="settings-content-panel" style={{ flex: 1, overflowY: "auto", padding: "24px 28px", minWidth: 0, boxSizing: "border-box" }}>
 
         {/* ── Unified Page Header ── */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "20px", borderBottom: "1px solid var(--border-color)" }}>
@@ -465,19 +461,6 @@ export default function SettingsPage() {
                   <CheckCircle size={16} /> Settings applied successfully!
                 </div></div>
             )}
-
-            <div style={card}>
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-bright)", marginBottom: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Palette size={16} color="var(--gold-mid)" /> Theme
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Choose your preferred color scheme</div>
-              </div>
-              {radioGroup([
-                { value: "dark", label: "Dark Mode", desc: "Easy on the eyes — recommended for night use" },
-                { value: "light", label: "Light Mode", desc: "Clean and bright for daytime use" },
-              ], theme, handleThemeChange)}
-            </div>
 
             <div style={card}>
               <div style={{ marginBottom: "16px" }}>
@@ -568,12 +551,12 @@ export default function SettingsPage() {
                 }}>
                   {user.privateKey ? user.privateKey.slice(0, 200) + "..." : "No private key found in localStorage"}
                 </div>
-                <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <div className="settings-btn-row" style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
                   <button onClick={() => setShowPrivateKey(!showPrivateKey)} style={{
                     padding: "6px 12px", borderRadius: "8px", cursor: "pointer",
                     background: "none", border: "1px solid var(--border-gold)",
                     color: "var(--text-bright)", fontSize: "11px", fontFamily: "Raleway, sans-serif",
-                    display: "flex", alignItems: "center", gap: "6px"
+                    display: "flex", alignItems: "center", gap: "6px", boxSizing: "border-box",
                   }}>
                     {showPrivateKey ? <EyeOff size={14} /> : <Eye size={14} />}
                     {showPrivateKey ? "Hide" : "Reveal"}
@@ -583,7 +566,7 @@ export default function SettingsPage() {
                     background: "none", border: "1px solid var(--border-gold)",
                     color: copiedKey ? "#4caf6e" : "var(--text-bright)",
                     fontSize: "11px", fontFamily: "Raleway, sans-serif",
-                    display: "flex", alignItems: "center", gap: "6px"
+                    display: "flex", alignItems: "center", gap: "6px", boxSizing: "border-box",
                   }}>
                     {copiedKey ? <CheckCircle size={14} /> : <Tag size={14} />}
                     {copiedKey ? "Copied!" : "Copy"}
@@ -749,24 +732,24 @@ export default function SettingsPage() {
                   lineHeight: "1.6", marginBottom: "12px",
                 }}
               />
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <div className="import-key-row" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={handleImportKey} style={{
                   padding: "10px 20px", borderRadius: "8px", cursor: "pointer",
                   background: "rgba(212, 175, 55,0.08)", border: "1px solid rgba(212, 175, 55,0.3)",
                   color: "var(--gold-mid)", fontSize: "13px",
                   fontFamily: "Raleway, sans-serif", fontWeight: "600",
-                  display: "flex", alignItems: "center", gap: "8px"
+                  display: "flex", alignItems: "center", gap: "8px", boxSizing: "border-box",
                 }}>
                   <FolderOpen size={16} /> Import Key
                 </button>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                   Or upload a .asc file:
                 </span>
                 <label style={{
                   padding: "8px 14px", borderRadius: "8px", cursor: "pointer",
                   background: "none", border: "1px solid var(--border-gold)",
                   color: "var(--text-muted)", fontSize: "12px", fontFamily: "Raleway, sans-serif",
-                  display: "flex", alignItems: "center", gap: "6px"
+                  display: "flex", alignItems: "center", gap: "6px", boxSizing: "border-box",
                 }}>
                   <Folder size={14} /> Browse
                   <input type="file" accept=".asc,.txt" style={{ display: "none" }}
@@ -1211,36 +1194,36 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Configure details to send mail to standard providers</div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>SMTP Host</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" />
                 </div>
                 <div>
                   <span style={labelStyle}>SMTP Port</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>SMTP Username (Email)</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="your-email@gmail.com" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="your-email@gmail.com" />
                 </div>
                 <div>
                   <span style={labelStyle}>SMTP Password (App Password)</span>
-                  <input type="password" className="auth-input" style={{ width: "100%" }} value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••••••••••" />
+                  <input type="password" className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••••••••••" />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>Sender Display Name</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={smtpFrom} onChange={e => setSmtpFrom(e.target.value)} placeholder="DMail Gateway" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={smtpFrom} onChange={e => setSmtpFrom(e.target.value)} placeholder="DMail Gateway" />
                 </div>
                 <div>
                   <span style={labelStyle}>Security Option</span>
-                  <select style={selectStyle} value={smtpSecure} onChange={e => setSmtpSecure(e.target.value)}>
+                  <select style={{ ...selectStyle, boxSizing: "border-box" }} value={smtpSecure} onChange={e => setSmtpSecure(e.target.value)}>
                     <option value="false">STARTTLS (Port 587)</option>
                     <option value="true">SSL/TLS (Port 465)</option>
                   </select>
@@ -1257,32 +1240,32 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Configure details to sync replies and attachments back to DMail</div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>IMAP Host</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.gmail.com" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.gmail.com" />
                 </div>
                 <div>
                   <span style={labelStyle}>IMAP Port</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={imapPort} onChange={e => setImapPort(e.target.value)} placeholder="993" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={imapPort} onChange={e => setImapPort(e.target.value)} placeholder="993" />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>IMAP Username</span>
-                  <input className="auth-input" style={{ width: "100%" }} value={imapUser} onChange={e => setImapUser(e.target.value)} placeholder="your-email@gmail.com" />
+                  <input className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={imapUser} onChange={e => setImapUser(e.target.value)} placeholder="your-email@gmail.com" />
                 </div>
                 <div>
                   <span style={labelStyle}>IMAP Password (App Password)</span>
-                  <input type="password" className="auth-input" style={{ width: "100%" }} value={imapPass} onChange={e => setImapPass(e.target.value)} placeholder="••••••••••••••••" />
+                  <input type="password" className="auth-input" style={{ width: "100%", boxSizing: "border-box" }} value={imapPass} onChange={e => setImapPass(e.target.value)} placeholder="••••••••••••••••" />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                 <div>
                   <span style={labelStyle}>Security Option</span>
-                  <select style={selectStyle} value={imapSecure} onChange={e => setImapSecure(e.target.value)}>
+                  <select style={{ ...selectStyle, boxSizing: "border-box" }} value={imapSecure} onChange={e => setImapSecure(e.target.value)}>
                     <option value="true">SSL/TLS (Port 993)</option>
                     <option value="false">STARTTLS (Port 143)</option>
                   </select>

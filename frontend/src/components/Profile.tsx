@@ -1,13 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { gun, db } from "@/utils/gun"
 import { copyToClipboard } from "@/utils/clipboard"
-import { initMailStore, getCounts, subscribe } from "@/utils/mailStore"
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
-  const [counts, setCounts] = useState({ inbox: 0, sent: 0, spam: 0, starred: 0, trash: 0 })
   const [copiedPublic, setCopiedPublic] = useState(false)
   const [showFullPublicKey, setShowFullPublicKey] = useState(false)
 
@@ -16,26 +13,6 @@ export default function ProfilePage() {
     const localUser = JSON.parse(localStorage.getItem("user") || "{}")
     if (!localUser.email) return
     setUser(localUser)
-
-    const updateCounts = () => {
-      const c = getCounts(localUser.email)
-      setCounts({
-        inbox: c.totalInbox,
-        sent: c.sent,
-        spam: c.spam,
-        starred: c.starred,
-        trash: c.trash
-      })
-    }
-
-    updateCounts()
-    const unsub = subscribe(updateCounts)
-
-    initMailStore(localUser.email).then(() => {
-      updateCounts()
-    })
-
-    return () => { unsub() }
   }, [])
 
 
@@ -150,32 +127,6 @@ export default function ProfilePage() {
            syncStatus === "error" ? "Sync Failed" : 
            "Sync Identity with Network"}
         </button>
-      </div>
-
-      {/* Stats */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-        gap: "12px", marginBottom: "28px",
-      }}>
-        {[
-          { label: "Inbox",   count: counts.inbox },
-          { label: "Sent",    count: counts.sent },
-          { label: "Starred", count: counts.starred },
-          { label: "Spam",    count: counts.spam },
-          { label: "Trash",   count: counts.trash },
-        ].map(({ label, count }) => (
-          <div key={label} style={{
-            background: "var(--bg-card)", border: "1px solid var(--border-gold)",
-            borderRadius: "12px", padding: "16px", textAlign: "center",
-          }}>
-            <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--gold-light)" }}>
-              {count}
-            </div>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-              {label}
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Public Key */}

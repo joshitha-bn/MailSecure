@@ -436,10 +436,37 @@ export default function SettingsPage() {
   // ── Helpers ──
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden", minWidth: 0 }}>
+    <div className="settings-container" style={{ display: "flex", height: "100%", overflow: "hidden", minWidth: 0 }}>
 
-      {/* ── Left nav ── */}
-      <div className="settings-left-nav" style={{
+      {/* ── Mobile dropdown selector (shown only on mobile) ── */}
+      <div className="settings-mobile-select-bar">
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-gold)" }}>
+          <div style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-muted)", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: "8px" }}>Settings</div>
+          <select
+            className="settings-mobile-select"
+            value={activeSection}
+            onChange={e => setActiveSection(e.target.value as Section)}
+            style={{
+              width: "100%", padding: "10px 14px",
+              background: "var(--bg-panel)", border: "1px solid var(--border-gold)",
+              borderRadius: "8px", color: "var(--text-bright)",
+              fontFamily: "Raleway, sans-serif", fontSize: "14px",
+              cursor: "pointer", outline: "none",
+            }}
+          >
+            <option value="general">⚙ General</option>
+            <option value="account">👤 Account</option>
+            <option value="security">🔒 Security</option>
+            <option value="blockchain">🔗 Blockchain</option>
+            <option value="labels">🏷 Labels</option>
+            <option value="network">🌐 Network</option>
+            <option value="hybridGateway">✉ Hybrid Gateway</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── Desktop Left nav (hidden on mobile) ── */}
+      <div className="settings-left-nav settings-left-nav-desktop" style={{
         width: "200px", flexShrink: 0, padding: "20px 12px",
         borderRight: "1px solid var(--border-gold)", overflowY: "auto",
         boxSizing: "border-box",

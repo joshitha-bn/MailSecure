@@ -2378,9 +2378,9 @@ body {
    ============================================= */
 
 @media (max-width: 768px) {
-  /* Show FAB on mobile */
+  /* FAB is removed from DOM — ensure no leftover display */
   .mobile-fab-compose {
-    display: flex;
+    display: none !important;
   }
 
   /* Remove card margin/border-radius from mail-area on mobile */
@@ -2526,22 +2526,32 @@ body {
     justify-content: center;
   }
 
-  /* Settings nav: compact on tablet */
-  .settings-left-nav {
-    width: 160px !important;
-    padding: 16px 8px !important;
+  /* Settings: switch to column layout and show mobile dropdown */
+  .settings-container {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100%;
   }
 
-  .settings-left-nav button {
-    font-size: 12px !important;
-    padding: 9px 10px !important;
+  /* Hide desktop settings sidebar on mobile */
+  .settings-left-nav-desktop {
+    display: none !important;
   }
 
-  /* Settings content: no overflow */
+  /* Show mobile dropdown selector */
+  .settings-mobile-select-bar {
+    display: block !important;
+    flex-shrink: 0;
+  }
+
+  /* Settings content panel: full width, scrollable */
   .settings-content-panel {
-    padding: 16px 14px !important;
+    padding: 16px !important;
     min-width: 0;
     overflow-x: hidden;
+    overflow-y: auto;
+    flex: 1;
   }
 
   /* Settings button rows: wrap */
@@ -2651,23 +2661,14 @@ body {
     max-width: 130px !important;
   }
 
-  /* Settings nav: icon-only on small screens */
-  .settings-left-nav {
-    width: 48px !important;
-    padding: 16px 4px !important;
-    overflow: hidden;
-  }
-
-  .settings-left-nav .settings-nav-text {
+  /* Settings: desktop nav hidden on small screens too */
+  .settings-left-nav-desktop {
     display: none !important;
   }
 
-  .settings-left-nav button {
-    padding: 10px !important;
-    justify-content: center !important;
-    min-height: 44px;
-    min-width: 44px;
-    border-radius: 8px !important;
+  /* Mobile dropdown bar always visible */
+  .settings-mobile-select-bar {
+    display: block !important;
   }
 
   /* Auth button row stacks vertically */
@@ -2742,11 +2743,6 @@ body {
     gap: 8px;
   }
 
-  /* Mail area: add small padding at bottom for FAB */
-  .mail-area {
-    padding-bottom: 80px !important;
-  }
-
   /* Page headers: smaller */
   .inbox-title {
     font-size: 18px !important;
@@ -2782,13 +2778,6 @@ body {
   /* Header: even tighter */
   .header {
     padding: 0 4px !important;
-  }
-
-  /* FAB: smaller label on tiny screens */
-  .mobile-fab-compose {
-    padding: 12px 16px !important;
-    font-size: 13px !important;
-    right: 12px !important;
   }
 
   /* Mail row: minimum height */
@@ -3616,33 +3605,54 @@ body {
    MOBILE RESPONSIVE SETTINGS & PROFILE
    ============================================= */
 
+/* Mobile settings dropdown: hidden by default (shown on mobile via media query) */
+.settings-mobile-select-bar {
+  display: none;
+}
+
+/* Desktop settings sidebar always visible on desktop */
+.settings-left-nav-desktop {
+  display: block;
+}
+
 @media (max-width: 768px) {
+  /* Settings container: stack vertically */
   .settings-container {
     flex-direction: column !important;
+    height: auto !important;
+    min-height: 100%;
+    overflow-y: auto !important;
   }
-  .settings-left-nav {
-    width: 100% !important;
-    border-right: none !important;
-    border-bottom: 1px solid var(--border-gold) !important;
-    display: flex !important;
-    overflow-x: auto !important;
-    padding: 8px !important;
-    gap: 6px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-    -webkit-overflow-scrolling: touch !important;
+
+  /* Show mobile section selector */
+  .settings-mobile-select-bar {
+    display: block !important;
+    background: var(--bg-panel);
+    flex-shrink: 0;
+    width: 100%;
   }
-  .settings-nav-text {
+
+  /* Hide desktop sidebar on mobile */
+  .settings-left-nav-desktop {
     display: none !important;
   }
-  .settings-left-nav button {
-    width: auto !important;
-    padding: 8px 14px !important;
-    border-left: none !important;
-    border-bottom: 2px solid transparent !important;
-    border-radius: 6px !important;
-    font-size: 12px !important;
+
+  /* Settings content: full width, reasonable padding */
+  .settings-content-panel {
+    padding: 16px !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
+
+  /* Settings cards: full width */
+  .settings-container > div > div[style] {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Modal responsive */
   .modal-content {
     width: calc(100vw - 32px) !important;
     max-width: 100vw !important;

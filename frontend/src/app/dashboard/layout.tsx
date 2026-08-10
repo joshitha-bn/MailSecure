@@ -2,7 +2,6 @@
 import dynamic from "next/dynamic"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { usePathname } from "next/navigation"
-import { PenLine } from "lucide-react"
 import Header from "@/components/Header"
 import Sidebar from "@/components/Sidebar"
 import { initMailStore, updateMailInStore, getAllRaw } from "@/utils/mailStore"
@@ -237,20 +236,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {showCompose && (
             <ComposeWindow onClose={() => setShowCompose(false)} />
           )}
-
-          {/* Mobile FAB — Compose (only visible on mobile via CSS) */}
-          <button
-            suppressHydrationWarning
-            className="mobile-fab-compose"
-            onClick={() => setShowCompose(true)}
-            aria-label="Compose new message"
-          >
-            <PenLine size={18} />
-            Compose
-          </button>
         </div>
       </LabelProvider>
     </ToastProvider>
   )
 }
-

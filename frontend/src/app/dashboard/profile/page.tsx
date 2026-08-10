@@ -456,9 +456,6 @@ export default function ProfilePage() {
             </p>
 
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button onClick={handleCopyPublicKey} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-                <Copy size={14} /> Copy
-              </button>
               {user.did && (
                 <button onClick={() => {
                   copyToClipboard(user.did)
@@ -505,7 +502,7 @@ export default function ProfilePage() {
 
             <div style={{
               background: "var(--bg-panel)", border: "1px solid rgba(217,48,37,0.2)",
-              borderRadius: "8px", padding: "10px 14px", marginBottom: "12px",
+              borderRadius: "8px", padding: "10px 14px",
               display: "flex", alignItems: "center", gap: "10px", overflow: "hidden"
             }}>
               <span style={{
@@ -521,12 +518,6 @@ export default function ProfilePage() {
                 color: "#e84234", fontSize: "11px", fontWeight: "600",
                 fontFamily: "Inter, sans-serif", flexShrink: 0
               }}>View Secret</button>
-            </div>
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={handleCopyPrivateKey} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", borderColor: "rgba(239,68,68,0.4)", color: "#ef4444" }}>
-                <Copy size={14} /> Copy Private Key
-              </button>
             </div>
           </div>
 

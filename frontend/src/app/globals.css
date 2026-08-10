@@ -2297,7 +2297,796 @@ body {
   justify-content: center;
 }
 
-/* Slide Drawer Container */
+/* =============================================
+   SLIDE DRAWER (OFF-CANVAS SIDEBAR)
+   ============================================= */
+
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+}
+
+.mobile-drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-drawer-content {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 82vw;
+  max-width: 320px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-gold);
+  z-index: 10000;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+  overflow-y: auto;
+  border-radius: 0 16px 16px 0;
+}
+
+.mobile-drawer-overlay.open .mobile-drawer-content {
+  transform: translateX(0);
+}
+
+/* =============================================
+   FLOATING COMPOSE BUTTON (FAB)
+   ============================================= */
+
+.mobile-fab-compose {
+  display: none;
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  z-index: 800;
+  background: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-mid) 100%);
+  color: #000;
+  border: none;
+  border-radius: 28px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: 'Raleway', sans-serif;
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4), 0 4px 10px rgba(0,0,0,0.3);
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.mobile-fab-compose:active {
+  transform: scale(0.94);
+  box-shadow: 0 4px 12px rgba(212,175,55,0.3);
+}
+
+/* =============================================
+   MAIL-AREA MOBILE: Remove card appearance
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* Show FAB on mobile */
+  .mobile-fab-compose {
+    display: flex;
+  }
+
+  /* Remove card margin/border-radius from mail-area on mobile */
+  .mail-area {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+  }
+
+  /* Auth card responsive */
+  .auth-card {
+    width: 100% !important;
+    max-width: 440px;
+    padding: 32px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Header height reduction */
+  .header {
+    height: 56px !important;
+    padding: 0 8px !important;
+  }
+
+  .header-left {
+    min-width: auto !important;
+    gap: 4px !important;
+  }
+
+  .header-right {
+    flex: 0 !important;
+    gap: 4px !important;
+    min-width: auto !important;
+    padding-left: 0 !important;
+  }
+
+  /* Hide desktop-only items in header */
+  .header-search-desktop {
+    display: none !important;
+  }
+
+  /* Show mobile search button */
+  .header-search-mobile-btn {
+    display: flex !important;
+  }
+
+  /* Hide desktop-only header icons */
+  .header-desktop-only {
+    display: none !important;
+  }
+
+  /* Desktop sidebar hidden on mobile (no fixed width consuming space) */
+  .sidebar.hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Compose window: full screen on mobile */
+  .compose-window-outer {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    z-index: 10000 !important;
+  }
+
+  /* Mail list pane: full width */
+  .mail-list-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* On mobile: hide list pane when mail is selected (full-screen reader) */
+  .mail-list-pane.has-selected {
+    display: none !important;
+  }
+
+  /* Mail detail pane: full width with less padding */
+  .mail-detail-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-left: none !important;
+    padding: 12px 8px !important;
+  }
+
+  /* Dashboard body: no overflow hidden (allow full screen panes) */
+  .dashboard-body {
+    height: calc(100dvh - 56px) !important;
+    overflow: hidden;
+  }
+
+  /* Dashboard: use dynamic viewport height */
+  .dashboard {
+    height: 100dvh !important;
+  }
+
+  /* All buttons: minimum 44px touch targets */
+  button,
+  .btn,
+  .btn-secondary,
+  .btn-send,
+  .send-btn,
+  .bulk-btn,
+  .action-link,
+  .toolbar-btn,
+  .empty-spam-btn,
+  .hover-icon-btn,
+  .chromeless-btn,
+  .labeled-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Compose button: min 48px touch target */
+  .compose-btn {
+    padding: 12px 18px !important;
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  /* Logout button: consistent sizing */
+  .logout-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Modal actions: stack on mobile */
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-actions .btn,
+  .modal-actions .btn-secondary,
+  .modal-actions button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Settings nav: compact on tablet */
+  .settings-left-nav {
+    width: 160px !important;
+    padding: 16px 8px !important;
+  }
+
+  .settings-left-nav button {
+    font-size: 12px !important;
+    padding: 9px 10px !important;
+  }
+
+  /* Settings content: no overflow */
+  .settings-content-panel {
+    padding: 16px 14px !important;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Settings button rows: wrap */
+  .settings-btn-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-btn-row button {
+    flex: 1 1 auto;
+    min-width: 100px;
+    justify-content: center;
+  }
+
+  /* Mail row: more compact on mobile */
+  .mail-row {
+    padding: 10px 12px !important;
+    min-height: 56px !important;
+  }
+
+  /* Mail sender: shorter truncation */
+  .mail-sender {
+    width: auto !important;
+    max-width: 140px !important;
+  }
+
+  /* Mail subject truncation */
+  .mail-subject {
+    max-width: 160px !important;
+  }
+
+  /* Mail detail subject: wrap */
+  .mail-detail-subject {
+    font-size: 18px !important;
+    word-break: break-word;
+  }
+
+  /* Header left/right gap adjustments */
+  .header-right {
+    gap: 8px !important;
+    min-width: auto !important;
+  }
+
+  .header-left {
+    min-width: auto !important;
+    gap: 8px !important;
+  }
+
+  .header-middle {
+    max-width: calc(100% - 120px);
+  }
+
+  /* Mail detail meta: wrap */
+  .mail-detail-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Bulk action bar: wrap */
+  .bulk-action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .bulk-btn {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+}
+
+/* =============================================
+   SMALL PHONE BREAKPOINT (< 600px)
+   ============================================= */
+
+@media (max-width: 600px) {
+  /* Show/hide utilities */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .show-on-mobile {
+    display: flex !important;
+  }
+
+  /* Auth page: comfortable padding */
+  .page-center {
+    padding: 16px 12px !important;
+  }
+
+  /* Mail row: compact for dense list */
+  .mail-row {
+    padding: 10px 12px !important;
+    min-height: 56px !important;
+  }
+
+  /* Sender truncation: fit phone screens */
+  .mail-sender {
+    width: auto !important;
+    max-width: 120px !important;
+  }
+
+  /* Subject truncation */
+  .mail-subject {
+    max-width: 130px !important;
+  }
+
+  /* Settings nav: icon-only on small screens */
+  .settings-left-nav {
+    width: 48px !important;
+    padding: 16px 4px !important;
+    overflow: hidden;
+  }
+
+  .settings-left-nav .settings-nav-text {
+    display: none !important;
+  }
+
+  .settings-left-nav button {
+    padding: 10px !important;
+    justify-content: center !important;
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 8px !important;
+  }
+
+  /* Auth button row stacks vertically */
+  .auth-button-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .auth-button-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Bulk action bar: wrap */
+  .bulk-action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .bulk-btn {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+
+  /* Profile page: full width */
+  .profile-wrapper {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+/* =============================================
+   NARROW PHONE BREAKPOINT (< 480px)
+   ============================================= */
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Auth title: smaller on narrow phones */
+  .auth-title {
+    font-size: 22px !important;
+  }
+
+  /* Auth card: minimal padding */
+  .auth-card {
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Header adjustments */
+  .header-right {
+    gap: 8px !important;
+    min-width: auto !important;
+  }
+
+  .header-left {
+    min-width: auto !important;
+    gap: 8px !important;
+  }
+
+  .header-middle {
+    max-width: calc(100% - 120px);
+  }
+
+  .mail-detail-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Mail area: add small padding at bottom for FAB */
+  .mail-area {
+    padding-bottom: 80px !important;
+  }
+
+  /* Page headers: smaller */
+  .inbox-title {
+    font-size: 18px !important;
+  }
+
+  /* Compact mail rows for 480px */
+  .mail-row {
+    min-height: 52px !important;
+  }
+
+  /* Mail timestamp: tighter */
+  .mail-date {
+    font-size: 11px !important;
+    min-width: 48px !important;
+  }
+
+  /* Folder search: full width */
+  .folder-search-container {
+    max-width: 100% !important;
+  }
+}
+
+/* =============================================
+   VERY SMALL PHONE (< 375px — e.g. 320px)
+   ============================================= */
+
+@media (max-width: 375px) {
+  /* Auth card ultra compact */
+  .auth-card {
+    padding: 20px 12px !important;
+  }
+
+  /* Header: even tighter */
+  .header {
+    padding: 0 4px !important;
+  }
+
+  /* FAB: smaller label on tiny screens */
+  .mobile-fab-compose {
+    padding: 12px 16px !important;
+    font-size: 13px !important;
+    right: 12px !important;
+  }
+
+  /* Mail row: minimum height */
+  .mail-row {
+    min-height: 48px !important;
+    padding: 8px !important;
+  }
+
+  /* Sender: very tight truncation */
+  .mail-sender {
+    max-width: 90px !important;
+  }
+
+  .mail-subject {
+    max-width: 100px !important;
+  }
+}
+
+/* =============================================
+   RESPONSIVE BUTTON SYSTEM
+   ============================================= */
+
+/* Base: ensure buttons never overflow their container */
+.btn,
+.btn-secondary,
+.btn-send,
+.send-btn,
+.compose-btn,
+.logout-btn,
+.toolbar-btn,
+.bulk-btn,
+.labeled-action-btn {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon + text buttons aligned */
+.btn,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Compose button fills sidebar width */
+.compose-btn {
+  width: 100% !important;
+  box-sizing: border-box;
+  justify-content: flex-start;
+}
+
+/* Modal action buttons wrap on small screens */
+.modal-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* =============================================
+   COMPOSE WINDOW: MOBILE FULL-SCREEN HEADER
+   ============================================= */
+
+/* Mobile compose: sticky top bar with back + send */
+@media (max-width: 768px) {
+  /* Compose window header: restyle for mobile */
+  .compose-mobile-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-compose-hdr);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* Hide desktop minimize/maximize buttons inside compose on mobile */
+  .compose-desktop-controls {
+    display: none !important;
+  }
+
+  /* Compose editor: make it flexible on mobile */
+  .compose-editor-area {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Compose format bar: horizontally scrollable */
+  .compose-format-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+  }
+}
+
+/* =============================================
+   MOBILE BACK BUTTON (Email Reader)
+   ============================================= */
+
+/* Mobile mail-detail back button */
+.mobile-back-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--gold-mid);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  min-height: 44px;
+  font-family: 'Raleway', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .mobile-back-btn {
+    display: flex !important;
+  }
+
+  /* Mail detail: full screen with sticky back button */
+  .mail-detail-pane {
+    position: relative;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Add safe area padding bottom to detail pane */
+  .mail-detail-pane {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* =============================================
+   RESPONSIVE TYPOGRAPHY
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* Page title */
+  h1.mail-page-title,
+  .inbox-title,
+  .mail-page-h1 {
+    font-size: 20px !important;
+  }
+
+  /* Section titles */
+  h2.section-title {
+    font-size: 17px !important;
+  }
+
+  /* Body text */
+  .mail-body-text {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Sender name in rows */
+  .mail-sender {
+    font-size: 13px;
+  }
+
+  /* Timestamp */
+  .mail-date {
+    font-size: 12px;
+  }
+}
+
+/* =============================================
+   SETTINGS PAGE: RESPONSIVE
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* Settings button rows: wrap */
+  .settings-btn-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-btn-row button {
+    flex: 1 1 auto;
+    min-width: 100px;
+    justify-content: center;
+  }
+}
+
+/* =============================================
+   HEADER RESPONSIVE
+   ============================================= */
+
+@media (max-width: 480px) {
+  .header-right {
+    gap: 8px !important;
+    min-width: auto !important;
+  }
+
+  .header-left {
+    min-width: auto !important;
+    gap: 8px !important;
+  }
+
+  .header-middle {
+    max-width: calc(100% - 120px);
+  }
+
+  .mail-detail-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* =============================================
+   MOBILE HEADER — Search icon + Profile avatar
+   ============================================= */
+
+@media (max-width: 768px) {
+  .header-search-desktop {
+    display: none !important;
+  }
+
+  .header-search-mobile-btn {
+    display: flex !important;
+  }
+
+  /* Hide desktop-only header items (status badge, shortcuts, settings, bell) */
+  .header-desktop-only {
+    display: none !important;
+  }
+
+  /* Shrink left & right padding on mobile header */
+  .header-right {
+    flex: 0 !important;
+    gap: 4px !important;
+    min-width: auto !important;
+    padding-left: 0 !important;
+  }
+}
+
+/* =============================================
+   PREVENT OVERFLOW GLOBALLY ON MOBILE
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* No horizontal scroll anywhere */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+  }
+
+  /* All images/video never overflow */
+  img, video, iframe {
+    max-width: 100% !important;
+  }
+
+  /* Tables: scroll horizontally in containers */
+  .mail-body-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Long URLs: wrap */
+  a {
+    word-break: break-all;
+  }
+
+  /* Prevent absolute/fixed elements from clipping */
+  .label-picker-popover,
+  .search-results-popup {
+    max-width: calc(100vw - 32px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 16px !important;
+  }
+
+  /* Account switcher: doesn't go off-screen */
+  .account-switcher-popup {
+    max-width: 90vw !important;
+    right: 0 !important;
+  }
+
+  /* Profile wrapper: full width */
+  .profile-wrapper {
+    max-width: 100% !important;
+  }
+
+  /* Safe area insets */
+  .dashboard {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
 .mobile-drawer-overlay {
   position: fixed;
   inset: 0;
@@ -2342,9 +3131,9 @@ body {
 .mobile-fab-compose {
   display: none;
   position: fixed;
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(28px + env(safe-area-inset-bottom, 16px));
   right: 20px;
-  z-index: 800;
+  z-index: 900;
   background: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-mid) 100%);
   color: #000;
   border: none;
@@ -2372,7 +3161,9 @@ body {
 
 @media (max-width: 768px) {
   .mobile-fab-compose {
-    display: flex;
+    display: flex !important;
+    bottom: calc(28px + env(safe-area-inset-bottom, 16px)) !important;
+    right: 18px !important;
   }
   
   .auth-card {
@@ -2393,13 +3184,63 @@ body {
   .compose-window-outer {
     position: fixed !important;
     inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
     border-radius: 0 !important;
     margin: 0 !important;
+    box-sizing: border-box !important;
     z-index: 10000 !important;
+  }
+
+  .compose-desktop-controls {
+    display: none !important;
+  }
+
+  .compose-mobile-header {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 14px !important;
+    background: var(--bg-compose-hdr) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 52px !important;
+  }
+
+  .compose-mobile-header .mobile-header-title {
+    text-align: center !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--text-bright) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .compose-bottom-toolbar {
+    padding: 10px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .compose-toolbar-left {
+    overflow-x: auto !important;
+    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .compose-toolbar-right {
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
   }
 
   .mail-list-pane.has-selected {
@@ -2688,3 +3529,137 @@ body {
     padding-left: 0 !important;
   }
 }
+
+/* =============================================
+   MOBILE FLOATING COMPOSE FAB & COMPOSE WINDOW
+   ============================================= */
+
+.mobile-fab-compose {
+  position: fixed !important;
+  bottom: calc(16px + env(safe-area-inset-bottom, 16px)) !important;
+  right: 16px !important;
+  z-index: 999 !important;
+  background: linear-gradient(135deg, var(--gold-rich), var(--gold-mid)) !important;
+  color: #000000 !important;
+  border: none !important;
+  border-radius: 28px !important;
+  padding: 12px 22px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.4) !important;
+  cursor: pointer !important;
+  max-width: fit-content !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.mobile-fab-compose:active {
+  transform: scale(0.95) !important;
+}
+
+@media (min-width: 769px) {
+  .mobile-fab-compose {
+    display: none !important;
+  }
+}
+
+/* Mobile Compose Window styling */
+@media (max-width: 768px) {
+  .compose-window-outer {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    z-index: 10000 !important;
+  }
+  .compose-desktop-controls {
+    display: none !important;
+  }
+  .compose-mobile-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 16px !important;
+    background: var(--bg-compose-hdr) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    flex-shrink: 0 !important;
+  }
+  .mobile-header-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--gold-mid) !important;
+  }
+  .compose-bottom-toolbar {
+    padding: 10px 14px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .compose-mobile-header {
+    display: none !important;
+  }
+}
+
+/* =============================================
+   MOBILE RESPONSIVE SETTINGS & PROFILE
+   ============================================= */
+
+@media (max-width: 768px) {
+  .settings-container {
+    flex-direction: column !important;
+  }
+  .settings-left-nav {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-gold) !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    padding: 8px !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .settings-nav-text {
+    display: none !important;
+  }
+  .settings-left-nav button {
+    width: auto !important;
+    padding: 8px 14px !important;
+    border-left: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+  }
+  .modal-content {
+    width: calc(100vw - 32px) !important;
+    max-width: 100vw !important;
+    margin: 16px !important;
+    padding: 20px 16px !important;
+  }
+  .auth-card {
+    width: calc(100vw - 32px) !important;
+    max-width: 100vw !important;
+    padding: 24px 16px !important;
+    margin: 16px auto !important;
+  }
+}
+
+/* Word wrapping for fingerprints and keys */
+.word-break-all, code, pre, .key-text-preview {
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+}
+

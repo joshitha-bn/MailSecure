@@ -8,6 +8,7 @@ import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/m
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 
 type Tab = "All" | "Unread"
 
@@ -322,7 +323,11 @@ function ArchivePageContent() {
               <button onClick={handleDecrypt} disabled={decrypting} style={{ width: "100%", background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "12px", fontWeight: "700", cursor: "pointer", opacity: decrypting ? 0.6 : 1 }}>{decrypting ? "Decrypting..." : "Unlock Message"}</button>
             </div>
           ) : (
-            <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{decryptedContent || mail.message}</div>
+            <EmailBodyViewer
+              content={decryptedContent || mail.message}
+              html={mail.html}
+              minHeight="250px"
+            />
           )}
         </div>
       </div>

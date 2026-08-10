@@ -7,7 +7,7 @@ import AccountSwitcher from "@/components/AccountSwitcher"
 import Logo from "@/components/Logo"
 import { getSavedAccounts, getAvatarColor } from "@/utils/accounts"
 
-import { Search, Menu, Settings, X } from "lucide-react"
+import { Search, Menu, X } from "lucide-react"
 
 interface HeaderProps {
   onToggle: () => void
@@ -37,7 +37,6 @@ function Header({ onToggle }: HeaderProps) {
   const [showResults, setShowResults] = useState(false)
   const [nodeStatus, setNodeStatus] = useState<"active" | "connecting">("active")
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [, setAccountCount] = useState(0)
   // Mobile search overlay state
   const [showMobileSearch, setShowMobileSearch] = useState(false)
@@ -49,10 +48,26 @@ function Header({ onToggle }: HeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const mobileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+
+  const updateUserInfo = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}")
     setCurrentUser(user)
+    if (user.email) {
+      const storedPhoto = localStorage.getItem(`profile_photo_${user.email}`)
+      setProfilePhoto(storedPhoto || null)
+    } else {
+      setProfilePhoto(null)
+    }
+  }
+
+  useEffect(() => {
+    updateUserInfo()
     document.documentElement.setAttribute("data-theme", "dark")
+
+    const handleStorage = () => updateUserInfo()
+    window.addEventListener("storage", handleStorage)
+    window.addEventListener("focus", handleStorage)
 
     const interval = setInterval(async () => {
       try {
@@ -64,7 +79,11 @@ function Header({ onToggle }: HeaderProps) {
       }
     }, 10000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("storage", handleStorage)
+      window.removeEventListener("focus", handleStorage)
+    }
   }, [])
 
   useEffect(() => {
@@ -252,9 +271,10 @@ function Header({ onToggle }: HeaderProps) {
       )}
 
       {/* ── Main Header ─────────────────────────────────────────── */}
-      <header className="header" style={{ height: "64px", borderBottom: "1px solid var(--border-gold)", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <header className="header" suppressHydrationWarning style={{ height: "64px", borderBottom: "1px solid var(--border-gold)", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div className="header-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
+            suppressHydrationWarning
             onClick={onToggle}
             style={{
               background: "none", border: "none", color: "var(--gold-mid)",
@@ -297,9 +317,6 @@ function Header({ onToggle }: HeaderProps) {
                 }}
                 onFocus={() => setSearchFocused(true)}
               />
-              <div style={{ color: "var(--text-dim)", fontSize: "11px", fontWeight: "600", letterSpacing: "1px" }}>
-                ⌘ K
-              </div>
             </div>
             
             {showResults && searchResults.length > 0 && (
@@ -326,6 +343,7 @@ function Header({ onToggle }: HeaderProps) {
 
         {/* ── Mobile: search icon (visible on mobile only via CSS) ── */}
         <button
+          suppressHydrationWarning
           className="header-search-mobile-btn"
           onClick={() => setShowMobileSearch(true)}
           style={{
@@ -341,7 +359,7 @@ function Header({ onToggle }: HeaderProps) {
           <Search size={22} />
         </button>
 
-        <div className="header-right" style={{ 
+        <div className="header-right" suppressHydrationWarning style={{ 
           flex: 1, 
           display: "flex", 
           justifyContent: "flex-end", 
@@ -371,134 +389,11 @@ function Header({ onToggle }: HeaderProps) {
             </span>
           </div>
 
-          {/* Keyboard Shortcuts Button — hidden on mobile */}
-          <button
-            className="header-icon-btn header-desktop-only"
-            onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }))}
-            style={{
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.02)",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              width: "36px", height: "36px", borderRadius: "10px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.2s ease"
-            }}
-            title="Keyboard Shortcuts (?)"
-            onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)")}
-          >
-            <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--gold-mid)" }}>?</span>
-          </button>
-
-          {/* Quick Settings Button — hidden on mobile */}
-          <div className="header-desktop-only" style={{ position: "relative" }}>
-            <button 
-              className="header-icon-btn"
-              onClick={() => setShowSettings(!showSettings)}
-              style={{ 
-                background: showSettings ? "rgba(212,175,55,0.15)" : "rgba(255, 255, 255, 0.04)", 
-                border: `1px solid ${showSettings ? "var(--gold-mid)" : "rgba(255, 255, 255, 0.02)"}`, 
-                cursor: "pointer", 
-                color: showSettings ? "var(--gold-mid)" : "var(--text-muted)",
-                width: "36px", height: "36px", borderRadius: "10px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.2s ease"
-              }}
-              title="Quick Settings"
-            >
-              <Settings size={16} />
-            </button>
-
-            {showSettings && (
-              <div style={{
-                position: "absolute", top: "calc(100% + 12px)", right: 0,
-                width: "280px", background: "var(--bg-card)", border: "1px solid var(--gold-mid)",
-                borderRadius: "12px", padding: "16px", zIndex: 1200,
-                boxShadow: "0 12px 36px rgba(0,0,0,0.6)", fontFamily: "Inter, sans-serif"
-              }}>
-                <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--gold-mid)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Settings size={14} /> Quick Settings
-                </div>
-
-                {/* Display Density */}
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
-                    Display Density
-                  </label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {[
-                      { id: "compact", label: "Compact (Dense list)" },
-                      { id: "comfortable", label: "Comfortable (Standard)" },
-                      { id: "spacious", label: "Spacious (Large cards)" },
-                    ].map((d) => {
-                      const currentDensity = localStorage.getItem("settings_inboxLayout") || "comfortable"
-                      const active = currentDensity === d.id
-                      return (
-                        <button
-                          key={d.id}
-                          onClick={() => {
-                            localStorage.setItem("settings_inboxLayout", d.id)
-                            window.dispatchEvent(new Event("storage"))
-                            setShowSettings(false)
-                          }}
-                          style={{
-                            textAlign: "left", padding: "8px 12px", borderRadius: "6px",
-                            fontSize: "12px", border: "1px solid var(--border-color)",
-                            background: active ? "rgba(160, 114, 10, 0.15)" : "transparent",
-                            color: active ? "var(--gold-mid)" : "var(--text-bright)",
-                            cursor: "pointer", fontWeight: active ? "700" : "500",
-                            transition: "all 0.15s"
-                          }}
-                        >
-                          {d.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Snippet Preview */}
-                <div>
-                  <label style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
-                    Message Snippets
-                  </label>
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    {[
-                      { id: "2lines", label: "Show" },
-                      { id: "none", label: "Hide" },
-                    ].map((p) => {
-                      const currentPreview = localStorage.getItem("settings_emailPreview") || "2lines"
-                      const active = currentPreview === p.id
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            localStorage.setItem("settings_emailPreview", p.id)
-                            window.dispatchEvent(new Event("storage"))
-                            setShowSettings(false)
-                          }}
-                          style={{
-                            flex: 1, padding: "6px", borderRadius: "6px",
-                            fontSize: "12px", border: "1px solid var(--border-color)",
-                            background: active ? "rgba(160, 114, 10, 0.15)" : "transparent",
-                            color: active ? "var(--gold-mid)" : "var(--text-bright)",
-                            cursor: "pointer", fontWeight: active ? "700" : "500",
-                            textAlign: "center"
-                          }}
-                        >
-                          {p.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Notifications bell — hidden on mobile */}
+
           <button 
+            suppressHydrationWarning
             className="header-icon-btn header-desktop-only"
             style={{ 
               background: "rgba(255, 255, 255, 0.04)", 
@@ -534,6 +429,7 @@ function Header({ onToggle }: HeaderProps) {
           {/* Profile Avatar — always visible */}
           <div ref={accountRef} style={{ position: "relative" }}>
             <button
+              suppressHydrationWarning
               onClick={() => {
                 setShowAccountSwitcher((prev) => !prev)
                 setAccountCount(getSavedAccounts().length)
@@ -545,17 +441,29 @@ function Header({ onToggle }: HeaderProps) {
                 minWidth: "44px", minHeight: "44px", justifyContent: "center"
               }}
             >
-              <div style={{
-                width: "32px", height: "32px", borderRadius: "50%",
-                background: currentUser.email
-                  ? getAvatarColor(currentUser.email)
-                  : "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "12px", fontWeight: "800", color: "var(--bg-body)",
-                border: showAccountSwitcher ? "2px solid var(--gold-mid)" : "1px solid var(--border-color)"
-              }}>
-                {(currentUser.email || "U").charAt(0).toUpperCase()}
-              </div>
+              {profilePhoto ? (
+                <img
+                  src={profilePhoto}
+                  alt="Avatar"
+                  style={{
+                    width: "32px", height: "32px", borderRadius: "50%",
+                    objectFit: "cover",
+                    border: showAccountSwitcher ? "2px solid var(--gold-mid)" : "1px solid var(--border-gold)"
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "50%",
+                  background: currentUser.email
+                    ? getAvatarColor(currentUser.email)
+                    : "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "12px", fontWeight: "800", color: "var(--bg-body)",
+                  border: showAccountSwitcher ? "2px solid var(--gold-mid)" : "1px solid var(--border-color)"
+                }}>
+                  {(currentUser.email || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
             </button>
 
             {showAccountSwitcher && (

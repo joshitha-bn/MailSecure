@@ -8,6 +8,7 @@ import { subscribe, updateMailInStore, getMails } from "@/utils/mailStore"
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 
 function AllMailPageContent() {
   const router = useRouter()
@@ -173,7 +174,7 @@ function AllMailPageContent() {
         </div>
 
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{mail.message}</div>
+          <EmailBodyViewer content={mail.message} html={mail.html} minHeight="250px" />
         </div>
       </div>
     )

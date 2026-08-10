@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { usePathname } from "next/navigation"
+import { PenLine } from "lucide-react"
 import Header from "@/components/Header"
 import Sidebar from "@/components/Sidebar"
 import { initMailStore, updateMailInStore, getAllRaw } from "@/utils/mailStore"
@@ -14,19 +15,23 @@ import RouteProgressBar from "@/components/RouteProgressBar"
 const GunStatusBanner = dynamic(() => import("@/components/GunStatusBanner"), { ssr: false })
 const OfflineQueueProcessor = dynamic(() => import("@/components/offlineQueueProcessor"), { ssr: false })
 const ComposeWindow = dynamic(() => import("@/components/ComposeWindow"), { ssr: false })
-const KeyboardShortcutsModal = dynamic(() => import("@/components/KeyboardShortcutsModal"), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [showCompose, setShowCompose] = useState(false)
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   const pathname = usePathname()
   const isInitialized = useRef(false)
 
-  // Global Keyboard Shortcuts Listener
+  // Close sidebar by default on mobile
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsSidebarOpen(false)
+    }
+  }, [])
+
+  // Global Keyboard Shortcuts Listener (Basic navigation only)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if user is typing in an input/textarea
       const activeTag = document.activeElement?.tagName.toLowerCase()
       if (activeTag === "input" || activeTag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable) {
         if (e.key === "Escape") {
@@ -35,18 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return
       }
 
-      if (e.key === "c" || e.key === "C") {
-        e.preventDefault()
-        setShowCompose(true)
-      } else if (e.key === "/") {
-        e.preventDefault()
-        const searchInput = document.querySelector<HTMLInputElement>("header input[type='text']")
-        if (searchInput) searchInput.focus()
-      } else if (e.key === "?") {
-        e.preventDefault()
-        setShowShortcutsModal(prev => !prev)
-      } else if (e.key === "Escape") {
-        setShowShortcutsModal(false)
+      if (e.key === "Escape") {
         setShowCompose(false)
       }
     }
@@ -213,12 +207,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <LabelProvider>
         <RouteProgressBar />
         <GunStatusBanner />
-        <div className="dashboard">
+        <div className="dashboard" suppressHydrationWarning>
           <Header
             onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
             onCompose={() => setShowCompose(true)}
           />
-          <div className="dashboard-body">
+          <div className="dashboard-body" suppressHydrationWarning>
             <Sidebar
               isOpen={isSidebarOpen}
               onClose={() => setIsSidebarOpen(false)}
@@ -244,9 +238,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ComposeWindow onClose={() => setShowCompose(false)} />
           )}
 
-          {showShortcutsModal && (
-            <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
-          )}
+          {/* Mobile FAB — Compose (only visible on mobile via CSS) */}
+          <button
+            suppressHydrationWarning
+            className="mobile-fab-compose"
+            onClick={() => setShowCompose(true)}
+            aria-label="Compose new message"
+          >
+            <PenLine size={18} />
+            Compose
+          </button>
         </div>
       </LabelProvider>
     </ToastProvider>

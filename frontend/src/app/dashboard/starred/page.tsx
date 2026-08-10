@@ -7,6 +7,7 @@ import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/m
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 import SearchFiltersPanel, { SearchFilters, emptyFilters } from "@/components/SearchFiltersPanel"
 
 function StarredPageContent() {
@@ -273,7 +274,7 @@ function StarredPageContent() {
         </div>
 
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{mail.message}</div>
+          <EmailBodyViewer content={mail.message} html={mail.html} minHeight="250px" />
         </div>
       </div>
     )

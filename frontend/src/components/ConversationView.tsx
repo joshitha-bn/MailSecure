@@ -10,6 +10,7 @@ import {
   ArrowLeft, Printer, ExternalLink, Lock
 } from "lucide-react"
 import { decryptMessage, cleanMessage } from "@/utils/gun"
+import { EmailBodyViewer } from "@/components/EmailBodyViewer"
 import { getCachedMail, updateCachedMail } from "@/utils/mailCache"
 import { getLocalNode, fetchFromIPFS } from "@/utils/ipfs"
 import { hybridDecrypt } from "@/utils/cryptoHybrid"
@@ -447,69 +448,11 @@ export default function ConversationView({
                               >UNLOCK MESSAGE</button>
                             </div>
                           </div>
-                        ) : (msg.html || (content && /<[a-z][\s\S]*>/i.test(content))) ? (
-                          <div style={{ borderRadius: "8px", overflow: "hidden", background: "#ffffff", border: "1px solid var(--border-gold)", width: "100%" }}>
-                            <iframe
-                              srcDoc={`
-                                <html>
-                                  <head>
-                                    <style>
-                                      body {
-                                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                                        font-size: 14px;
-                                        line-height: 1.6;
-                                        color: #333333;
-                                        background-color: #ffffff;
-                                        margin: 16px;
-                                        word-break: break-word;
-                                      }
-                                      img {
-                                        max-width: 100%;
-                                        height: auto;
-                                      }
-                                    </style>
-                                  </head>
-                                  <body>
-                                    ${msg.html || content}
-                                  </body>
-                                </html>
-                              `}
-                              sandbox="allow-popups"
-                              style={{
-                                width: "100%",
-                                border: "none",
-                                minHeight: "350px",
-                                background: "#ffffff",
-                              }}
-                            />
-                          </div>
                         ) : (
-                          // Custom renderer for golden left-border lines
-                          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                            {cleanMessage(content).split('\n').map((line, i, arr) => {
-                              if (line.trim().startsWith('|') || line.trim().match(/^[-•]\s/)) {
-                                const cleanLine = line.trim().replace(/^[|•-]\s*/, '');
-                                const isPrevList = i > 0 && (arr[i - 1].trim().startsWith('|') || arr[i - 1].trim().match(/^[-•]\s/));
-                                return (
-                                  <div key={i} style={{
-                                    borderLeft: "3px solid #E8B923",
-                                    paddingLeft: "12px",
-                                    marginTop: isPrevList ? "-12px" : "0",
-                                    color: "#A0A0A0"
-                                  }}>
-                                    {cleanLine}
-                                  </div>
-                                );
-                              }
-
-                              // Check if line looks like a golden signature name
-                              if (line.trim() === "Vitalik Nakamoto" || line.trim() === msg.senderEmail.split("@")[0] || line.trim() === "EtherX Foundation") {
-                                return <div key={i} style={{ minHeight: "1em", color: "#E8B923", fontWeight: "500", marginTop: "16px" }}>{line}</div>;
-                              }
-
-                              return <div key={i} style={{ minHeight: "1em" }}>{line}</div>;
-                            })}
-                          </div>
+                          <EmailBodyViewer
+                            html={msg.html}
+                            content={content}
+                          />
                         )}
                       </div>
 

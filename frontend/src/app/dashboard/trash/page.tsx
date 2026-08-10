@@ -6,6 +6,7 @@ import { decryptMessage, db, cleanMessage } from "@/utils/gun"
 import { Star, Trash2, Mail, Lock, Search, ArrowLeft, RefreshCw, Inbox, AlertTriangle, Check } from "lucide-react"
 import { subscribe, updateMailInStore, getMails, initMailStore } from "@/utils/mailStore"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 
 function TrashPageContent() {
   const router = useRouter()
@@ -190,7 +191,12 @@ function TrashPageContent() {
               <button onClick={handleDecrypt} disabled={decrypting} style={{ width: "100%", background: "var(--border-color)", color: "var(--text-dim)", border: "none", borderRadius: "8px", padding: "12px", fontWeight: "700", cursor: "pointer", opacity: decrypting ? 0.6 : 1 }}>Unlock Trash Content</button>
             </div>
           ) : (
-            <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", marginBottom: "40px" }}>{decryptedContent || mail.message}</div>
+            <EmailBodyViewer
+              content={decryptedContent || mail.message}
+              html={mail.html}
+              minHeight="250px"
+              style={{ marginBottom: "40px" }}
+            />
           )}
         </div>
       </div>

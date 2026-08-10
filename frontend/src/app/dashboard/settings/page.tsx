@@ -8,18 +8,27 @@ import {
   Trash2, Key, Eye, EyeOff, Shield, 
   Download, Folder, FolderOpen, RefreshCw, 
   CheckCircle2, XCircle, AlertCircle, Sparkles,
-  ArrowRight, Mail, Database, Layout, Wallet, Search, Send
+  ArrowRight, Mail, Database, Layout, Wallet, Search, Send, User, Check, Copy
 } from "lucide-react"
 import BlockchainVerify from "@/components/BlockchainVerify"
 import { getLabels, saveLabel, deleteLabel, createId, PRESET_COLORS, type Label } from "@/utils/labelStore"
 import { copyToClipboard } from "@/utils/clipboard"
 import { isPinataConfigured, getLocalNode } from "@/utils/ipfs"
+import { useRouter } from "next/navigation"
 
 
-type Section = "general" | "security" | "blockchain" | "labels" | "network" | "hybridGateway"
+type Section = "general" | "account" | "security" | "blockchain" | "labels" | "network" | "hybridGateway"
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [activeSection, setActiveSection] = useState<Section>("general")
+
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false)
+  const [deactivateStatus, setDeactivateStatus] = useState("")
+
+  const [emailNotifications, setEmailNotifications] = useState("true")
+  const [replyToAddress, setReplyToAddress] = useState("")
+  const [accountSaved, setAccountSaved] = useState(false)
 
   // ── General ──
   const [inboxLayout, setInboxLayout] = useState("comfortable")
@@ -80,6 +89,8 @@ export default function SettingsPage() {
 
     setInboxLayout(localStorage.getItem("settings_inboxLayout") || "comfortable")
     setEmailPreview(localStorage.getItem("settings_emailPreview") || "2lines")
+    setEmailNotifications(localStorage.getItem("settings_emailNotifications") || "true")
+    setReplyToAddress(localStorage.getItem("settings_replyToAddress") || "")
     setLabels(getLabels(u.email || ""))
     
     // Fetch Gateway Config (Synchronize auth credentials first to prevent GunDB sync race conditions)
@@ -142,6 +153,29 @@ export default function SettingsPage() {
     window.dispatchEvent(new Event("storage"))
     setGeneralSaved(true)
     setTimeout(() => setGeneralSaved(false), 3000)
+  }
+
+  // ── Account ──────────────────────────────────────────────────
+  const saveAccountSettings = () => {
+    localStorage.setItem("settings_emailNotifications", emailNotifications)
+    localStorage.setItem("settings_replyToAddress", replyToAddress)
+    setAccountSaved(true)
+    setTimeout(() => setAccountSaved(false), 3000)
+  }
+
+  const handleDeactivate = async () => {
+    setDeactivateStatus("Deactivating...")
+    const updatedUser = { ...user, status: "deactivated" }
+    localStorage.setItem("user", JSON.stringify(updatedUser))
+    const { db } = await import("@/utils/gun")
+    db.registerUser(updatedUser) // Broadcast state change to network
+    
+    setTimeout(() => {
+      localStorage.removeItem("user")
+      localStorage.removeItem("session_token")
+      window.dispatchEvent(new Event("storage"))
+      router.push("/login")
+    }, 1500)
   }
 
   // ── Security ─────────────────────────────────────────────────
@@ -418,6 +452,7 @@ export default function SettingsPage() {
 
         {([
           { key: "general",       icon: <Settings size={14} />,  label: "General" },
+          { key: "account",       icon: <User size={14} />,      label: "Account" },
           { key: "security",      icon: <Lock size={14} />,      label: "Security" },
           { key: "blockchain",    icon: <LinkIcon size={14} />,  label: "Blockchain" },
           { key: "labels",        icon: <Tag size={14} />,       label: "Labels" },
@@ -489,7 +524,103 @@ export default function SettingsPage() {
               ], emailPreview, setEmailPreview)}
             </div>
 
+            <div style={{ ...card, border: "1px solid rgba(217,48,37,0.3)", background: "rgba(217,48,37,0.03)" }}>
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "15px", fontWeight: "700", color: "#e84234", marginBottom: "4px" }}>
+                  <AlertCircle size={16} style={{ marginRight: "8px", verticalAlign: "middle" }} /> Account Deactivation
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Deactivate your account if you no longer wish to use DMail.
+                </div>
+              </div>
+              <button onClick={() => setShowDeactivateModal(true)} style={{
+                padding: "10px 20px", borderRadius: "8px", cursor: "pointer",
+                background: "rgba(217,48,37,0.1)", border: "1px solid rgba(217,48,37,0.35)",
+                color: "#e84234", fontSize: "13px", fontFamily: "Raleway, sans-serif", fontWeight: "600",
+                display: "flex", alignItems: "center", gap: "8px"
+              }}>
+                <Trash2 size={16} /> Deactivate Account
+              </button>
+            </div>
+
             <button onClick={saveGeneralSettings} style={{
+              padding: "12px 28px",
+              background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
+              border: "none", borderRadius: "10px", cursor: "pointer",
+              fontSize: "13px", fontWeight: "700", color: "var(--bg-body)",
+              fontFamily: "Raleway, sans-serif",
+              boxShadow: "0 2px 12px rgba(212, 175, 55,0.3)",
+            }}>Save Changes</button>
+          </>
+        )}
+
+        {/* ══ ACCOUNT ═════════════════════════════════════════ */}
+        {activeSection === "account" && (
+          <>
+            <h2 className="mail-detail-subject" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <User size={22} color="var(--gold-mid)" /> Account Settings
+            </h2>
+
+            {accountSaved && (
+              <div style={{
+                background: "rgba(76,175,110,0.1)", border: "1px solid rgba(76,175,110,0.3)",
+                borderRadius: "8px", padding: "10px 16px", marginBottom: "16px",
+                fontSize: "12px", color: "#4caf6e", display: "flex", alignItems: "center", gap: "8px"
+              }}><CheckCircle size={14} /> Account settings saved successfully</div>
+            )}
+
+            <div style={card}>
+              <span style={labelStyle}>DMail Address</span>
+              <div style={{
+                background: "var(--bg-panel)", border: "1px solid var(--border-color)",
+                borderRadius: "8px", padding: "12px 16px", color: "var(--text-bright)",
+                fontFamily: "Courier New, monospace", fontSize: "14px",
+                display: "flex", alignItems: "center", justifyContent: "space-between"
+              }}>
+                {user.email || "Loading..."}
+                <button 
+                  onClick={() => copyToClipboard(user.email)} 
+                  style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer" }}
+                  title="Copy Address"
+                >
+                  <Copy size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div style={card}>
+              <span style={labelStyle}>Email Notifications</span>
+              {radioGroup(
+                [
+                  { value: "true", label: "Enabled", desc: "Receive browser notifications for new messages." },
+                  { value: "false", label: "Disabled", desc: "Do not send browser notifications." },
+                ],
+                emailNotifications,
+                setEmailNotifications
+              )}
+            </div>
+
+            <div style={card}>
+              <span style={labelStyle}>Reply-To Address (Optional)</span>
+              <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
+                If you want replies to go to a different email address, specify it here.
+              </p>
+              <input 
+                type="email"
+                value={replyToAddress}
+                onChange={(e) => setReplyToAddress(e.target.value)}
+                placeholder="e.g. alternate@example.com"
+                style={{
+                  width: "100%", padding: "12px 16px", boxSizing: "border-box",
+                  background: "var(--bg-panel)", border: "1px solid var(--border-gold)",
+                  borderRadius: "8px", color: "var(--text-bright)",
+                  fontFamily: "Inter, sans-serif", fontSize: "13px",
+                  outline: "none"
+                }}
+              />
+            </div>
+
+            <button onClick={saveAccountSettings} style={{
               padding: "12px 28px",
               background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))",
               border: "none", borderRadius: "10px", cursor: "pointer",
@@ -1356,6 +1487,36 @@ export default function SettingsPage() {
                     }} />Generating...
                   </>
                 ) : "Regenerate Keys"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeactivateModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "400px" }}>
+            <div style={{ marginBottom: "8px", color: "#e84234", display: "flex", justifyContent: "center" }}><AlertCircle size={32} /></div>
+            <h3 style={{ color: "#e84234", textAlign: "center", marginBottom: "8px" }}>Deactivate Account?</h3>
+            <p style={{ fontSize: "13px", color: "var(--text-dim)", marginBottom: "20px", textAlign: "center" }}>
+              Are you sure you want to deactivate your DMail account? Your account will no longer be active until it is restored.
+            </p>
+            {deactivateStatus && (
+              <div style={{ color: "var(--gold-mid)", fontSize: "13px", marginBottom: "16px", textAlign: "center" }}>
+                {deactivateStatus}
+              </div>
+            )}
+            
+            <div className="modal-actions" style={{ display: "flex", gap: "10px" }}>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowDeactivateModal(false)} disabled={!!deactivateStatus}>
+                Cancel
+              </button>
+              <button 
+                style={{ flex: 1, padding: "10px", background: "#e84234", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" }} 
+                onClick={handleDeactivate} 
+                disabled={!!deactivateStatus}
+              >
+                Deactivate
               </button>
             </div>
           </div>

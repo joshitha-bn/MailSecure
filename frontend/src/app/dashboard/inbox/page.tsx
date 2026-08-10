@@ -9,6 +9,7 @@ import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type La
 import { useLabel } from "@/context/LabelContext"
 import MailSkeleton from "@/components/MailSkeleton"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 import SearchFiltersPanel, { SearchFilters, emptyFilters, hasActiveFilters } from "@/components/SearchFiltersPanel"
 
 type Tab = "All" | "Unread" | "Starred"
@@ -611,9 +612,12 @@ function InboxPageContent() {
                     </div>
 
                     {/* Message Body */}
-                    <div style={{ color: "var(--text-bright)", fontSize: "14px", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-                      {decryptedContent || tMail.message}
-                    </div>
+                    <EmailBodyViewer
+                      content={decryptedContent || tMail.message}
+                      html={tMail.html}
+                      minHeight="150px"
+                      style={{ margin: "8px 0" }}
+                    />
                   </div>
                 )}
               </div>
@@ -697,71 +701,17 @@ function InboxPageContent() {
 
         {/* Main Content Area */}
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", fontFamily: "Inter, sans-serif", marginBottom: "40px", width: "100%" }}>
+          <div style={{ marginBottom: "40px", width: "100%" }}>
             {decrypting ? (
-              "Decrypting secure message..."
-            ) : mail.html ? (
-              <div style={{ borderRadius: "8px", overflow: "hidden", background: "#0f0f0f", border: "1px solid rgba(212,175,55,0.15)", width: "100%" }}>
-                <iframe
-                  title="email-body"
-                  srcDoc={`
-                    <!DOCTYPE html>
-                    <html>
-                      <head>
-                        <meta charset="utf-8">
-                        <meta name="color-scheme" content="dark">
-                        <style>
-                          html, body {
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-                            font-size: 14px !important;
-                            line-height: 1.6 !important;
-                            color: #d4d4d4 !important;
-                            background-color: #0f0f0f !important;
-                            margin: 0 !important;
-                            padding: 16px !important;
-                            word-break: break-word !important;
-                          }
-                          /* Force dark backgrounds on common Gmail table layouts */
-                          table, td, th, div, section, article, aside, header, footer, main, p {
-                            background-color: transparent !important;
-                            color: inherit !important;
-                          }
-                          /* Keep links gold */
-                          a { color: #C5A059 !important; }
-                          /* Images stay full width */
-                          img { max-width: 100% !important; height: auto !important; }
-                          /* Blockquote styling for reply chains */
-                          blockquote {
-                            border-left: 3px solid #C5A059 !important;
-                            margin: 8px 0 8px 8px !important;
-                            padding-left: 12px !important;
-                            color: #888 !important;
-                          }
-                          /* Override Gmail's .gmail_quote colors */
-                          .gmail_quote, .gmail_extra { color: #888 !important; }
-                          /* White boxes inside Gmail often come from inline bgcolor tables */
-                          [bgcolor], [background] { background: transparent !important; }
-                        </style>
-                      </head>
-                      <body>
-                        ${mail.html}
-                      </body>
-                    </html>
-                  `}
-                  sandbox="allow-popups"
-                  style={{
-                    width: "100%",
-                    border: "none",
-                    minHeight: "350px",
-                    background: "#0f0f0f",
-                    colorScheme: "dark",
-                  }}
-                />
+              <div style={{ color: "var(--text-dim)", fontSize: "14px", fontStyle: "italic" }}>
+                Decrypting secure message...
               </div>
             ) : (
-              <div style={{ whiteSpace: "pre-wrap" }}>
-                {decryptedContent || mail.message}
-              </div>
+              <EmailBodyViewer
+                html={mail.html}
+                content={decryptedContent || mail.message}
+                minHeight="350px"
+              />
             )}
           </div>
 

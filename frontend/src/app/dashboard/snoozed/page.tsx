@@ -5,6 +5,7 @@ import { Clock, ArrowLeft, Trash2, MailOpen } from "lucide-react"
 import { subscribe, getMails, updateMailInStore, initMailStore } from "@/utils/mailStore"
 import MailSkeleton from "@/components/MailSkeleton"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 
 export default function SnoozedPage() {
   const [loading, setLoading] = useState(true)
@@ -101,9 +102,12 @@ export default function SnoozedPage() {
             </button>
           </div>
 
-          <div style={{ fontSize: "14px", color: "var(--text-bright)", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-            {selectedMail.message}
-          </div>
+          <EmailBodyViewer
+            content={selectedMail.message}
+            html={selectedMail.html}
+            minHeight="250px"
+            style={{ marginTop: "12px" }}
+          />
         </div>
       )}
     </div>

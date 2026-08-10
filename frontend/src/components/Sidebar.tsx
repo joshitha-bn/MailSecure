@@ -85,7 +85,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
       <div>
         <div style={{ padding: "8px 16px 20px" }}>
-          <button onClick={() => { onCompose(); if (onClose) onClose(); }} className="compose-btn" style={{ 
+          <button suppressHydrationWarning onClick={() => { onCompose(); if (onClose) onClose(); }} className="compose-btn" style={{ 
             width: "100%", padding: "12px 24px", borderRadius: "16px",
             boxShadow: "var(--shadow-deep)"
           }}>
@@ -310,7 +310,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
         </div>
 
         <div className="sidebar-footer" style={{ marginTop: "8px" }}>
-          <button className="logout-btn" onClick={() => setShowLogoutModal(true)}>
+          <button suppressHydrationWarning className="logout-btn" onClick={() => setShowLogoutModal(true)}>
             <LogOut size={18} />
             <span className="logout-text">Logout</span>
           </button>
@@ -322,7 +322,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`sidebar hide-on-mobile ${isOpen ? "" : "closed"}`}>
+      <aside suppressHydrationWarning className={`sidebar hide-on-mobile ${isOpen ? "" : "closed"}`}>
         <div className="sidebar-top" style={{ height: "100%" }}>
           {renderNavContent()}
         </div>
@@ -336,7 +336,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
         <div className="mobile-drawer-content" onClick={e => e.stopPropagation()}>
           <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-gold)" }}>
             <Logo size={22} />
-            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "18px" }}>
+            <button suppressHydrationWarning onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "18px" }}>
               ✕
             </button>
           </div>
@@ -355,10 +355,10 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
               You are about to sign out of your current session. Your credentials will remain saved in your vault.
             </p>
             <div className="modal-actions" style={{ display: "flex", gap: "12px" }}>
-              <button className="btn-secondary" onClick={() => setShowLogoutModal(false)} style={{ flex: 1 }}>
+              <button suppressHydrationWarning className="btn-secondary" onClick={() => setShowLogoutModal(false)} style={{ flex: 1 }}>
                 Cancel
               </button>
-              <button className="btn" onClick={handleLogout} style={{ flex: 1, background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))" }}>
+              <button suppressHydrationWarning className="btn" onClick={handleLogout} style={{ flex: 1, background: "linear-gradient(135deg, var(--gold-rich), var(--gold-light))" }}>
                 Confirm Sign Out
               </button>
             </div>

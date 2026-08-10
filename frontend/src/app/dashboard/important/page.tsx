@@ -6,6 +6,7 @@ import { getCachedMail, updateCachedMail } from "@/utils/mailCache"
 import { decryptMessage, cleanMessage } from "@/utils/gun"
 import { getLocalNode } from "@/utils/ipfs"
 import PageHeader from "@/components/PageHeader"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 import { 
   RefreshCw, MoreVertical, Archive, Trash2, CheckSquare, Square, 
   Star, ChevronLeft, Shield, Lock, Inbox, AlertTriangle, Mail
@@ -230,9 +231,12 @@ export default function ImportantPage() {
               </div>
             </div>
           ) : (
-            <div style={{ whiteSpace: "pre-wrap", lineHeight: "1.9", fontSize: "15px", color: "var(--text-bright)", fontFamily: "Inter, Raleway, sans-serif", maxWidth: "760px" }}>
-              {cleanMessage(selectedMail.message)}
-            </div>
+            <EmailBodyViewer
+              content={cleanMessage(selectedMail.message)}
+              html={selectedMail.html}
+              minHeight="250px"
+              style={{ maxWidth: "760px" }}
+            />
           )}
         </div>
       </div>

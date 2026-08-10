@@ -1,5 +1,5 @@
 "use client"
-import { memo, useState } from "react"
+import { memo, useState, useEffect } from "react"
 import { Lock, Star, Check, Paperclip, Archive, Trash2, Mail, MailOpen, Clock } from "lucide-react"
 import { cleanMessage } from "@/utils/gun"
 import { updateMailInStore } from "@/utils/mailStore"
@@ -69,8 +69,16 @@ const MailRow = memo(({
 }: MailRowProps) => {
   const { showToast } = useToast()
   const [isHovered, setIsHovered] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const isUnread = !mail.isRead
   const isCompact = layout === "compact"
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
 
   const nameToDisplay = showToRecipient
     ? (mail.receiverName || mail.receiverEmail?.split("@")[0] || "Unknown")
@@ -85,6 +93,133 @@ const MailRow = memo(({
 
   const rowHeight = isCompact ? "44px" : "52px"
 
+  // ─────────────────────────────────────────────────
+  // Mobile: Compact two-line Gmail-style row
+  // ─────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div
+        onClick={() => onOpen(mail)}
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          padding: "10px 12px",
+          borderBottom: "1px solid #141414",
+          cursor: "pointer",
+          position: "relative",
+          background: isSelected
+            ? "linear-gradient(90deg, rgba(212,175,55,0.14) 0%, rgba(212,175,55,0.06) 60%, rgba(212,175,55,0.02) 100%)"
+            : isSelectedInBulk
+            ? "rgba(212, 175, 55, 0.10)"
+            : isUnread ? "rgba(255,255,255,0.02)" : "transparent",
+          boxShadow: isSelected ? "inset 0 0 0 1px rgba(212,175,55,0.12)" : "none",
+          userSelect: "none",
+          minHeight: "62px",
+          gap: "10px",
+        }}
+      >
+        {/* Selected indicator bar */}
+        {(isSelected || isSelectedInBulk) && (
+          <div style={{
+            position: "absolute", left: 0, top: 0, bottom: 0,
+            width: isSelected ? "4px" : "3px",
+            background: "var(--gold-mid)",
+            boxShadow: isSelected ? "0 0 12px rgba(212,175,55,0.7)" : "none",
+            zIndex: 2,
+            borderRadius: "0 2px 2px 0"
+          }} />
+        )}
+
+        {/* Avatar */}
+        <div
+          onClick={e => { e.stopPropagation(); onToggleSelection(mail.id, e) }}
+          style={{
+            width: "36px", height: "36px", borderRadius: "50%",
+            background: isSelectedInBulk ? "var(--gold-mid)" : avatarColors.bg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "14px", fontWeight: "800",
+            color: isSelectedInBulk ? "var(--bg-body)" : avatarColors.text,
+            flexShrink: 0, cursor: "pointer",
+            border: isSelectedInBulk ? "2px solid var(--gold-mid)" : "2px solid transparent",
+            marginTop: "1px",
+          }}
+        >
+          {isSelectedInBulk ? <Check size={16} strokeWidth={4} /> : senderInitial}
+        </div>
+
+        {/* Main content: two lines */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+          {/* Line 1: Sender + timestamp */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+            <span style={{
+              fontSize: "13px",
+              fontWeight: isUnread ? "700" : "500",
+              color: isUnread ? "var(--text-bright)" : "var(--text-muted)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              flex: 1, fontFamily: "Inter, sans-serif",
+            }}>
+              {showToRecipient ? "To: " : ""}{nameToDisplay}
+              {mail.message?.includes("-----BEGIN PGP MESSAGE-----") && (
+                <Lock size={10} color="var(--gold-mid)" style={{ marginLeft: "4px", display: "inline" }} />
+              )}
+            </span>
+            <span style={{
+              fontSize: "11px",
+              fontWeight: isUnread ? "700" : "400",
+              color: isUnread ? "var(--text-bright)" : "var(--text-dim)",
+              whiteSpace: "nowrap", flexShrink: 0,
+            }}>
+              {formatTime(mail.time)}
+            </span>
+          </div>
+
+          {/* Line 2: Subject + snippet */}
+          <div style={{
+            fontSize: "13px",
+            fontWeight: isUnread ? "600" : "400",
+            color: isUnread ? "var(--text-bright)" : "var(--text-dim)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            fontFamily: "Inter, sans-serif",
+          }}>
+            {subject}
+            {snippet && (
+              <span style={{ fontWeight: "400", color: "var(--text-dim)", opacity: 0.7 }}>
+                {" – "}{snippet}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Star */}
+        <button
+          onClick={e => onToggleStar(mail.id, e)}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px", flexShrink: 0,
+            color: mail.isStarred ? "var(--gold-mid)" : "var(--text-dim)",
+            opacity: mail.isStarred ? 1 : 0.4,
+            display: "flex", alignItems: "flex-start", marginTop: "2px",
+            minWidth: "32px", minHeight: "32px", justifyContent: "center",
+          }}
+        >
+          <Star size={15} fill={mail.isStarred ? "var(--gold-mid)" : "none"} strokeWidth={mail.isStarred ? 0 : 1.5} />
+        </button>
+
+        {/* Unread dot */}
+        {isUnread && (
+          <div style={{
+            position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)",
+            width: "6px", height: "6px", borderRadius: "50%",
+            background: "var(--gold-mid)", boxShadow: "0 0 6px rgba(212,175,55,0.6)",
+          }} />
+        )}
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────
+  // Desktop: Original full-width single-line layout
+  // ─────────────────────────────────────────────────
   return (
     <div
       onClick={() => onOpen(mail)}
@@ -211,7 +346,7 @@ const MailRow = memo(({
 
       {/* Timestamp OR Quick Hover Action Buttons (Gmail-style) */}
       {isHovered ? (
-        <div 
+        <div
           onClick={e => e.stopPropagation()}
           style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px", flexShrink: 0 }}
         >
@@ -258,6 +393,7 @@ const MailRow = memo(({
           >
             <Archive size={14} />
           </button>
+
           {/* Delete / Trash */}
           <button
             title="Delete"
@@ -277,6 +413,7 @@ const MailRow = memo(({
           >
             <Trash2 size={14} />
           </button>
+
           {/* Mark Read/Unread */}
           <button
             title={isUnread ? "Mark as read" : "Mark as unread"}

@@ -9,6 +9,7 @@ import { trustSender } from "@/utils/spamFilter"
 import { getLabels, getMailLabels, toggleMailLabel, subscribeLabelStore, type Label } from "@/utils/labelStore"
 import { useLabel } from "@/context/LabelContext"
 import MailRow from "@/components/MailRow"
+import EmailBodyViewer from "@/components/EmailBodyViewer"
 
 
 function SpamPageContent() {
@@ -266,7 +267,11 @@ function SpamPageContent() {
               <button onClick={handleDecrypt} disabled={decrypting} style={{ width: "100%", background: "#e84234", color: "var(--text-bright)", border: "none", borderRadius: "8px", padding: "12px", fontWeight: "700", cursor: "pointer", opacity: decrypting ? 0.6 : 1 }}>{decrypting ? "Analyzing..." : "Unlock Content"}</button>
             </div>
           ) : (
-            <div style={{ color: "var(--text-bright)", fontSize: "15px", lineHeight: "1.6", whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>{decryptedContent || mail.message}</div>
+            <EmailBodyViewer
+              content={decryptedContent || mail.message}
+              html={mail.html}
+              minHeight="250px"
+            />
           )}
         </div>
       </div>

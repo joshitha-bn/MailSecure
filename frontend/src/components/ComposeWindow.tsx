@@ -10,8 +10,8 @@ import {
   PenLine, Save, Minus, Maximize2, Minimize2, X,
   Check, WifiOff, AlertCircle, Send, Calendar,
   Paperclip, Archive, Clock, ShieldCheck, AlertTriangle, Link, Lock,
-  ChevronDown, ChevronUp, Bold, Italic, Underline, Strikethrough,
-  List, Type, Palette, UserCheck
+  ChevronDown, ChevronUp,
+  Type, Palette, UserCheck
 } from "lucide-react"
 
 type StatusType = "idle" | "sending" | "success" | "error"
@@ -416,8 +416,37 @@ export default function ComposeWindow({
         borderTopColor: "var(--gold-mid)",
       }}
     >
-      {/* ── Header ── */}
-      <div style={{
+      {/* ── Mobile Full-Screen Top Bar ── */}
+      <div className="compose-mobile-header">
+        <button
+          onClick={onClose}
+          style={{
+            background: "none", border: "none", color: "var(--gold-mid)",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: "4px",
+            fontSize: "14px", fontWeight: "600", padding: "6px 8px", minHeight: "40px",
+            borderRadius: "6px"
+          }}
+        >
+          <X size={18} /> Close
+        </button>
+        <span className="mobile-header-title">New Message</span>
+        <button
+          onClick={sendMail}
+          disabled={isSending}
+          style={{
+            background: "var(--gold-mid)", color: "#000", border: "none",
+            padding: "7px 14px", borderRadius: "8px", fontWeight: "700",
+            fontSize: "13px", cursor: isSending ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", gap: "6px",
+            opacity: isSending ? 0.7 : 1, minHeight: "36px", whiteSpace: "nowrap"
+          }}
+        >
+          <Send size={13} />
+          {isSending ? "..." : "Send"}
+        </button>
+      </div>
+      {/* ── Header (Desktop) ── */}
+      <div className="compose-desktop-controls" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 20px",
         background: "var(--bg-compose-hdr)",
@@ -620,87 +649,12 @@ export default function ComposeWindow({
 
       {/* ── Formatting Bar ── */}
       {showFormatBar && (
-        <div style={{
+        <div className="compose-format-bar" style={{
           display: "flex", alignItems: "center", gap: "4px",
           padding: "6px 20px", background: "var(--bg-deep)",
-          borderBottom: "1px solid var(--border-color)", flexShrink: 0
+          borderBottom: "1px solid var(--border-color)", flexShrink: 0,
+          overflowX: "auto", WebkitOverflowScrolling: "touch" as any
         }}>
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyFormatting("bold")}
-            style={{ 
-              padding: "4px 8px", 
-              background: formatStates.bold ? "rgba(212, 175, 55, 0.15)" : "none", 
-              border: `1px solid ${formatStates.bold ? "var(--gold-mid)" : "var(--border-color)"}`, 
-              borderRadius: "4px", 
-              color: formatStates.bold ? "var(--gold-mid)" : "var(--text-bright)", 
-              cursor: "pointer" 
-            }}
-            title="Bold"
-          >
-            <Bold size={13} />
-          </button>
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyFormatting("italic")}
-            style={{ 
-              padding: "4px 8px", 
-              background: formatStates.italic ? "rgba(212, 175, 55, 0.15)" : "none", 
-              border: `1px solid ${formatStates.italic ? "var(--gold-mid)" : "var(--border-color)"}`, 
-              borderRadius: "4px", 
-              color: formatStates.italic ? "var(--gold-mid)" : "var(--text-bright)", 
-              cursor: "pointer" 
-            }}
-            title="Italic"
-          >
-            <Italic size={13} />
-          </button>
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyFormatting("underline")}
-            style={{ 
-              padding: "4px 8px", 
-              background: formatStates.underline ? "rgba(212, 175, 55, 0.15)" : "none", 
-              border: `1px solid ${formatStates.underline ? "var(--gold-mid)" : "var(--border-color)"}`, 
-              borderRadius: "4px", 
-              color: formatStates.underline ? "var(--gold-mid)" : "var(--text-bright)", 
-              cursor: "pointer" 
-            }}
-            title="Underline"
-          >
-            <Underline size={13} />
-          </button>
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyFormatting("strikeThrough")}
-            style={{ 
-              padding: "4px 8px", 
-              background: formatStates.strikeThrough ? "rgba(212, 175, 55, 0.15)" : "none", 
-              border: `1px solid ${formatStates.strikeThrough ? "var(--gold-mid)" : "var(--border-color)"}`, 
-              borderRadius: "4px", 
-              color: formatStates.strikeThrough ? "var(--gold-mid)" : "var(--text-bright)", 
-              cursor: "pointer" 
-            }}
-            title="Strikethrough"
-          >
-            <Strikethrough size={13} />
-          </button>
-          <div style={{ width: "1px", height: "18px", background: "var(--border-color)", margin: "0 4px" }} />
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyFormatting("insertUnorderedList")}
-            style={{ 
-              padding: "4px 8px", 
-              background: formatStates.insertUnorderedList ? "rgba(212, 175, 55, 0.15)" : "none", 
-              border: `1px solid ${formatStates.insertUnorderedList ? "var(--gold-mid)" : "var(--border-color)"}`, 
-              borderRadius: "4px", 
-              color: formatStates.insertUnorderedList ? "var(--gold-mid)" : "var(--text-bright)", 
-              cursor: "pointer" 
-            }}
-            title="Bullet List"
-          >
-            <List size={13} />
-          </button>
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
@@ -802,8 +756,8 @@ export default function ComposeWindow({
       )}
 
       {/* ── Toolbar ── */}
-      <div style={{ padding: "12px 20px", background: "var(--bg-compose-hdr)", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-color)" }}>
-        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+      <div className="compose-bottom-toolbar" style={{ padding: "12px 20px", background: "var(--bg-compose-hdr)", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-color)", flexShrink: 0, overflowX: "auto", WebkitOverflowScrolling: "touch" as any }}>
+        <div className="compose-toolbar-left" style={{ display: "flex", gap: "4px", alignItems: "center", flexShrink: 0 }}>
           <button
             onClick={() => setShowFormatBar(!showFormatBar)}
             style={{ width: "32px", height: "32px", background: showFormatBar ? "rgba(160,114,10,0.1)" : "none", border: `1px solid ${showFormatBar ? "var(--gold-mid)" : "var(--border-color)"}`, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showFormatBar ? "var(--gold-mid)" : "var(--text-dim)", transition: "all 0.15s" }}
@@ -843,19 +797,19 @@ export default function ComposeWindow({
 
           <button
             onClick={() => saveDraft(false)}
-            style={{ height: "32px", padding: "0 12px", background: draftSaved ? "rgba(34,197,94,0.1)" : "none", border: `1px solid ${draftSaved ? "rgba(34,197,94,0.3)" : "var(--border-color)"}`, borderRadius: "6px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", color: draftSaved ? "#22c55e" : "var(--text-dim)", fontSize: "11px", fontWeight: "600", transition: "all 0.2s" }}
+            style={{ height: "32px", padding: "0 10px", background: draftSaved ? "rgba(34,197,94,0.1)" : "none", border: `1px solid ${draftSaved ? "rgba(34,197,94,0.3)" : "var(--border-color)"}`, borderRadius: "6px", display: "flex", alignItems: "center", gap: "5px", cursor: "pointer", color: draftSaved ? "#22c55e" : "var(--text-dim)", fontSize: "11px", fontWeight: "600", transition: "all 0.2s", whiteSpace: "nowrap" }}
             title="Save Draft"
             onMouseEnter={e => { if (!draftSaved) { e.currentTarget.style.color = "var(--gold-mid)"; e.currentTarget.style.borderColor = "var(--gold-mid)" } }}
             onMouseLeave={e => { if (!draftSaved) { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border-color)" } }}
           >
             {draftSaved ? <Check size={13} /> : <Save size={13} />}
-            {draftSaved ? "Saved!" : "Save Draft"}
+            {draftSaved ? "Saved!" : "Draft"}
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="compose-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {draftLastSaved && !draftSaved && (
-            <span style={{ fontSize: "10px", color: "var(--text-dim)", opacity: 0.7 }}>
+            <span className="hide-on-mobile" style={{ fontSize: "10px", color: "var(--text-dim)", opacity: 0.7 }}>
               Saved {draftLastSaved}
             </span>
           )}
@@ -865,17 +819,17 @@ export default function ComposeWindow({
             disabled={isSending}
             style={{
               background: "var(--gold-mid)", color: "#000", border: "none",
-              padding: "9px 24px", borderRadius: "8px", fontWeight: "700",
-              fontSize: "13px", cursor: isSending ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", gap: "8px",
+              padding: "8px 16px", borderRadius: "8px", fontWeight: "700",
+              fontSize: "12px", cursor: isSending ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", gap: "6px",
               boxShadow: "0 2px 8px rgba(160, 114, 10, 0.3)",
-              opacity: isSending ? 0.7 : 1,
+              opacity: isSending ? 0.7 : 1, whiteSpace: "nowrap",
               transition: "all 0.15s"
             }}
             onMouseEnter={e => { if (!isSending) e.currentTarget.style.transform = "translateY(-1px)" }}
             onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)" }}
           >
-            <Send size={14} />
+            <Send size={13} />
             {isSending ? "Sending..." : "Send Encrypted"}
           </button>
         </div>

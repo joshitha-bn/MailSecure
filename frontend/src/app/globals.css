@@ -18,6 +18,9 @@ body {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 button, input, textarea, select {
@@ -126,7 +129,8 @@ button, input, textarea, select {
   flex: 1;
   background: var(--bg-body);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
 }
 
@@ -216,7 +220,7 @@ body {
    ============================================= */
 
 .page-center {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -225,6 +229,8 @@ body {
   background-image:
     radial-gradient(ellipse at 30% 40%, rgba(197,160,89,0.07) 0%, transparent 55%),
     radial-gradient(ellipse at 75% 65%, rgba(201,135,26,0.05) 0%, transparent 55%);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* =============================================
@@ -389,7 +395,7 @@ body {
    ============================================= */
 
 .dashboard {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* prevents the whole page from scrolling */
@@ -644,7 +650,7 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden; /* children handle their own scroll */
-  height: calc(100vh - 72px); /* subtract actual header height */
+  height: calc(100dvh - 72px); /* subtract actual header height */
 }
 
 /* =============================================
@@ -1468,6 +1474,10 @@ body {
   padding: 32px;
   border-radius: 20px;
   width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: 90dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-deep), 0 0 0 1px var(--border-gold);
   text-align: center;
   animation: fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both;
@@ -2378,7 +2388,7 @@ body {
    ============================================= */
 
 @media (max-width: 768px) {
-  /* FAB is removed from DOM — ensure no leftover display */
+  /* FAB is removed — ensure permanently hidden */
   .mobile-fab-compose {
     display: none !important;
   }
@@ -2673,7 +2683,7 @@ body {
 
   /* Auth button row stacks vertically */
   .auth-button-row {
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 12px;
   }
 
@@ -2768,6 +2778,37 @@ body {
 /* =============================================
    VERY SMALL PHONE (< 375px — e.g. 320px)
    ============================================= */
+
+/* Mobile Floating Action Button */
+.mobile-fab {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-rich), var(--gold-light));
+  color: var(--bg-body);
+  box-shadow: 0 4px 20px rgba(212,175,55,0.4);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mobile-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(212,175,55,0.3);
+}
+
+@media (max-width: 768px) {
+  .mobile-fab {
+    display: flex;
+  }
+}
 
 @media (max-width: 375px) {
   /* Auth card ultra compact */
@@ -3149,11 +3190,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .mobile-fab-compose {
-    display: flex !important;
-    bottom: calc(28px + env(safe-area-inset-bottom, 16px)) !important;
-    right: 18px !important;
-  }
+  /* FAB permanently removed — no display:flex */
   
   .auth-card {
     width: 100% !important;
@@ -3254,7 +3291,7 @@ body {
   }
 
   .page-center {
-    padding: 16px 12px !important;
+    padding: 16px 12px 80px 12px !important;
   }
 
   .mail-row {
@@ -3442,7 +3479,7 @@ body {
 
   /* Auth button row stacks */
   .auth-button-row {
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 12px;
   }
 
@@ -3523,29 +3560,10 @@ body {
    MOBILE FLOATING COMPOSE FAB & COMPOSE WINDOW
    ============================================= */
 
+/* mobile-fab-compose: permanently removed */
+/* display: none on all sizes — do not add back */
 .mobile-fab-compose {
-  position: fixed !important;
-  bottom: calc(16px + env(safe-area-inset-bottom, 16px)) !important;
-  right: 16px !important;
-  z-index: 999 !important;
-  background: linear-gradient(135deg, var(--gold-rich), var(--gold-mid)) !important;
-  color: #000000 !important;
-  border: none !important;
-  border-radius: 28px !important;
-  padding: 12px 22px !important;
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.4) !important;
-  cursor: pointer !important;
-  max-width: fit-content !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-}
-
-.mobile-fab-compose:active {
-  transform: scale(0.95) !important;
+  display: none !important;
 }
 
 @media (min-width: 769px) {
@@ -3673,3 +3691,472 @@ body {
   overflow-wrap: anywhere !important;
 }
 
+/* Long cryptographic values, DIDs, hashes — prevent horizontal overflow */
+.key-display code,
+.public-key-value,
+.private-key-value,
+.fingerprint-value {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* =============================================
+   MOBILE: COMPREHENSIVE FINAL OVERRIDES
+   Applied after all other rules — highest specificity
+   ============================================= */
+
+@media (max-width: 768px) {
+
+  /* 1. BASE — prevent horizontal overflow */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+  }
+
+  /* 2. DASHBOARD — dvh for mobile address bar */
+  .dashboard {
+    height: 100dvh !important;
+  }
+
+  .dashboard-body {
+    height: calc(100dvh - 56px) !important;
+    overflow: hidden;
+  }
+
+  /* 3. MAIL AREA — vertically scrollable on mobile */
+  .mail-area {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 4. AUTH PAGE — vertically scrollable for tall forms */
+  .page-center {
+    min-height: 100dvh;
+    align-items: flex-start;
+    padding: 20px 12px 100px 12px !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .auth-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 28px 16px !important;
+    border-radius: 16px !important;
+    margin: 0 auto 20px auto;
+  }
+
+  /* 5. MODAL — scrollable when content exceeds viewport */
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .modal-content {
+    width: 100% !important;
+    max-width: calc(100vw - 32px) !important;
+    max-height: 90dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+    margin: 0 auto;
+  }
+
+  /* 6. PROFILE — responsive grid */
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .profile-wrapper {
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow-x: hidden;
+  }
+
+  /* 7. COMPOSE WINDOW — full screen mobile */
+  .compose-window-outer {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    z-index: 10000 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Hide desktop minimize/maximize in compose */
+  .compose-desktop-controls {
+    display: none !important;
+  }
+
+  /* Compose editor: fills remaining space and scrolls */
+  .compose-editor-area {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    min-height: 0 !important;
+  }
+
+  /* Compose bottom toolbar: horizontal scroll only for icons */
+  .compose-bottom-toolbar {
+    flex-shrink: 0 !important;
+    padding: 10px 12px !important;
+    overflow-x: hidden !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  .compose-toolbar-left {
+    overflow-x: auto !important;
+    max-width: calc(100% - 130px) !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .compose-toolbar-right {
+    display: none !important;
+  }
+
+  /* 8. MAIL LIST PANE — full width; hidden when email is open */
+  .mail-list-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .mail-list-pane.has-selected {
+    display: none !important;
+  }
+
+  /* 9. MAIL DETAIL PANE — full width and scrollable */
+  .mail-detail-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-left: none !important;
+    padding: 12px 10px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* 10. MAIL ROWS — no horizontal overflow */
+  .mail-row {
+    padding: 10px 12px !important;
+    min-height: 56px !important;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  /* 11. MAIL DETAIL SUBJECT — wrap on mobile */
+  .mail-detail-subject {
+    font-size: 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .mail-detail-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+    overflow-x: hidden;
+  }
+
+  /* 12. SIDEBAR — hidden on mobile (use drawer instead) */
+  .sidebar.hide-on-mobile {
+    display: none !important;
+  }
+
+  /* 13. SETTINGS — vertical layout, fully scrollable */
+  .settings-container {
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+  }
+
+  .settings-content-panel {
+    padding: 16px !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    flex: 1 1 auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 14. SEARCH FILTER DROPDOWN — not overflow on mobile */
+  .search-filter-panel-dropdown {
+    max-height: 80dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* 15. ACCOUNT SWITCHER — constrained */
+  .account-switcher-popup {
+    max-width: 90vw !important;
+    right: 0 !important;
+    overflow-y: auto;
+    max-height: 80dvh;
+  }
+
+  /* 16. DRAWER — vertically scrollable */
+  .mobile-drawer-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  /* 17. IMAGES, IFRAMES — never overflow */
+  img, video, iframe {
+    max-width: 100% !important;
+  }
+
+  /* 18. EMAIL BODY — horizontal overflow wrapped */
+  .mail-body-content {
+    max-width: 100%;
+    overflow-x: hidden;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* 19. FOLDER SEARCH — full width */
+  .folder-search-container {
+    max-width: 100% !important;
+  }
+
+  /* 20. FULL MAIL VIEW — ensure it scrolls */
+  .full-mail-view {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 21. MOBILE FAB — permanently off */
+  .mobile-fab-compose {
+    display: none !important;
+  }
+
+  /* 22. SAFE AREA SUPPORT */
+  .dashboard {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* 23. CONTACTS GRID — responsive */
+  .contacts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)) !important;
+    overflow-x: hidden;
+  }
+
+  /* 24. STAT CARDS */
+  .stat-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* 25. FOLDER TABS — horizontal scroll for many tabs */
+  .folder-tabs-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  /* 26. PREVENT LONG WORDS CAUSING WIDTH OVERFLOW */
+  p, span, div, h1, h2, h3, h4, li {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+}
+
+/* =============================================
+   SMALL PHONE ADDITIONAL FIXES (< 480px)
+   ============================================= */
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 20px 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .stat-card {
+    padding: 14px !important;
+  }
+
+  .stat-value {
+    font-size: 20px !important;
+  }
+
+  .profile-hero {
+    padding: 0 !important;
+    gap: 12px;
+  }
+
+  .key-card {
+    padding: 16px !important;
+  }
+
+  .key-display {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Compose bottom toolbar: very small phones */
+  .compose-bottom-toolbar {
+    padding: 8px !important;
+    gap: 4px !important;
+  }
+
+  .folder-tab-item {
+    min-width: 100px !important;
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* =============================================
+   MOBILE COMPOSE WINDOW OVERRIDES (< 768px)
+   ============================================= */
+@media (max-width: 768px) {
+  .compose-window-outer {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    border-radius: 0 !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* Show mobile header, hide desktop header */
+  .compose-mobile-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    min-height: 56px;
+    background: var(--bg-compose-hdr);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .compose-desktop-controls {
+    display: none !important;
+  }
+
+  /* Make the recipient/subject input rows bigger for touch */
+  .compose-window-outer input[type="text"],
+  .compose-window-outer input[type="email"] {
+    font-size: 16px !important;  /* prevents iOS zoom on focus */
+    min-height: 44px !important;
+    padding: 8px 0 !important;
+  }
+
+  /* Ensure message body area fills remaining space properly */
+  .compose-window-outer [contenteditable] {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    min-height: 0 !important;
+    padding: 16px !important;
+    font-size: 16px !important;
+  }
+
+  /* Formatting toolbar: scrollable and compact */
+  .compose-format-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 6px 12px !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    scrollbar-width: none !important;
+  }
+  .compose-format-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Bottom toolbar: full width, scrollable, bigger touch targets */
+  .compose-bottom-toolbar {
+    padding: 10px 12px !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    flex-shrink: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+  }
+  .compose-bottom-toolbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .compose-bottom-toolbar button {
+    width: 40px !important;
+    height: 40px !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+  }
+  /* Make Draft button icon-only on mobile */
+  .compose-toolbar-left button[title="Save Draft"] span,
+  .compose-toolbar-left button[title="Save Draft"] {
+    width: 40px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  /* Hide the draft text label, show only icon */
+  .compose-toolbar-left button[title="Save Draft"] span:last-child {
+    display: none !important;
+  }
+  /* Hide the right-side send button (already in header) */
+  .compose-toolbar-right {
+    display: none !important;
+  }
+  /* Hide divider */
+  .compose-bottom-toolbar > div > div[style*="width: 1px"] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .compose-mobile-header {
+    display: none !important;
+  }
+}

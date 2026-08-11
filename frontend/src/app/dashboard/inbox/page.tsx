@@ -467,19 +467,29 @@ function InboxPageContent() {
   }
 
   const handleSendReply = async () => {
-    if (!replyText || !currentSelectedMail) return
+    if (!currentSelectedMail) return
     const recipient = replyMode === "reply" ? currentSelectedMail.senderEmail : forwardRecipient
     if (!recipient) return
+    // Reply requires message text; forward can optionally have no message
+    if (replyMode === "reply" && !replyText) return
     setSendingReply(true)
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}")
       const { sendMailInBackground } = await import("@/utils/backgroundSend")
       
+      // For forwarding, include the original message body
+      let messageBody = replyText
+      if (replyMode === "forward") {
+        const originalContent = decryptedContent || currentSelectedMail.message || ""
+        const fwdHeader = `\n\n---------- Forwarded message ----------\nFrom: ${currentSelectedMail.senderName || currentSelectedMail.senderEmail}\nDate: ${currentSelectedMail.time}\nSubject: ${currentSelectedMail.subject}\nTo: ${currentSelectedMail.receiverEmail}\n\n`
+        messageBody = (replyText ? replyText + "\n" : "") + fwdHeader + originalContent
+      }
+
       sendMailInBackground({
         user,
         recipientEmail: recipient,
         subject: `${replyMode === "reply" ? "Re:" : "Fwd:"} ${currentSelectedMail.subject}`,
-        message: replyText,
+        message: messageBody,
         attachments: replyAttachments,
         threadId: currentSelectedMail.threadId || currentSelectedMail.id,
         parentMessageId: currentSelectedMail.messageId || currentSelectedMail.id
@@ -501,12 +511,8 @@ function InboxPageContent() {
     if (!mail) return null
     const isEncrypted = mail.message?.includes("-----BEGIN PGP MESSAGE-----")
 
-    // Find all thread messages matching normalized subject
-    const normalizeSub = (s: string) => (s || "").replace(/^((Re|Fwd):\s*)+/i, "").trim().toLowerCase()
-    const targetSub = normalizeSub(mail.subject)
-    const threadMails = getAllRaw()
-      .filter(m => normalizeSub(m.subject) === targetSub)
-      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+    // The user requested to only see the single selected email rather than a thread of emails.
+    const threadMails = [mail];
 
     // Parse attachments if stored as JSON string
     let parsedAttachments: any[] = []
@@ -519,7 +525,7 @@ function InboxPageContent() {
     }
 
     return (
-      <div className="mail-detail-pane" style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-body)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
+        <div className="mail-detail-pane" style={{ flex: 1, display: "flex", flexDirection: "column", background: "linear-gradient(90deg, rgba(212,175,55,0.14) 0%, rgba(212,175,55,0.06) 60%, rgba(212,175,55,0.02) 100%)", padding: "32px 40px 40px", borderLeft: "1px solid #141414", position: "relative", overflowY: "auto" }}>
         {/* Header Navigation */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "28px" }}>
           <button
@@ -699,21 +705,8 @@ function InboxPageContent() {
           ><Trash2 size={15} /></button>
         </div>
 
-        {/* Main Content Area */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ marginBottom: "40px", width: "100%" }}>
-            {decrypting ? (
-              <div style={{ color: "var(--text-dim)", fontSize: "14px", fontStyle: "italic" }}>
-                Decrypting secure message...
-              </div>
-            ) : (
-              <EmailBodyViewer
-                html={mail.html}
-                content={decryptedContent || mail.message}
-                minHeight="350px"
-              />
-            )}
-          </div>
+        {/* Main Content Area (attachments + reply) */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
 
           {/* Received Attachments Section */}
           {parsedAttachments.length > 0 && (
@@ -790,10 +783,34 @@ function InboxPageContent() {
           {/* Reply Composition Box */}
           {replyMode && (
             <div style={{ marginTop: "auto", border: "1px solid #1F1F1F", borderRadius: "12px", background: "var(--bg-card)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <textarea placeholder="Write your reply message..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ width: "100%", height: "120px", background: "transparent", border: "none", color: "var(--text-bright)", fontSize: "14px", outline: "none", resize: "none" }} />
+              {replyMode === "forward" && (
+                <input
+                  type="email"
+                  placeholder="Forward to (email address)..."
+                  value={forwardRecipient}
+                  onChange={(e) => setForwardRecipient(e.target.value)}
+                  style={{
+                    width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid #333",
+                    color: "var(--text-bright)", borderRadius: "8px", padding: "10px 14px",
+                    fontSize: "14px", outline: "none"
+                  }}
+                />
+              )}
+              <textarea 
+                placeholder={replyMode === "reply" ? "Write your reply message..." : "Add a message to this forwarded email..."}
+                value={replyText} 
+                onChange={(e) => setReplyText(e.target.value)} 
+                style={{ width: "100%", height: "120px", background: "transparent", border: "none", color: "var(--text-bright)", fontSize: "14px", outline: "none", resize: "none" }} 
+              />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <button onClick={() => fileInputRef.current?.click()} style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer" }}><Paperclip size={18} /></button>
-                <button onClick={handleSendReply} disabled={sendingReply || !replyText} style={{ background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "8px 24px", fontWeight: "700", cursor: "pointer", opacity: sendingReply ? 0.6 : 1 }}>Send</button>
+                <button 
+                  onClick={handleSendReply} 
+                  disabled={sendingReply || (replyMode === "forward" ? !forwardRecipient : !replyText)} 
+                  style={{ background: "var(--gold-mid)", color: "var(--bg-body)", border: "none", borderRadius: "8px", padding: "8px 24px", fontWeight: "700", cursor: "pointer", opacity: sendingReply ? 0.6 : 1 }}
+                >
+                  Send
+                </button>
               </div>
             </div>
           )}

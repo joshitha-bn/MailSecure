@@ -85,7 +85,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
       <div>
         <div style={{ padding: "8px 16px 20px" }}>
-          <button suppressHydrationWarning onClick={() => { onCompose(); if (onClose) onClose(); }} className="compose-btn" style={{ 
+          <button title="Compose" suppressHydrationWarning onClick={() => { onCompose(); if (onClose) onClose(); }} className="compose-btn" style={{ 
             width: "100%", padding: "12px 24px", borderRadius: "16px",
             boxShadow: "var(--shadow-deep)"
           }}>
@@ -97,7 +97,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
         <nav className="nav-menu">
           <div className="nav-section-label">Mail</div>
 
-          <Link href="/dashboard/inbox" onClick={handleNavClick} className={`menu-link ${isActive("inbox") ? "active" : ""}`}>
+          <Link title="Inbox" href="/dashboard/inbox" onClick={handleNavClick} className={`menu-link ${isActive("inbox") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Inbox size={20} style={{ opacity: isActive("inbox") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Inbox</span>
@@ -112,7 +112,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/starred" onClick={handleNavClick} className={`menu-link ${isActive("starred") ? "active" : ""}`}>
+          <Link title="Starred" href="/dashboard/starred" onClick={handleNavClick} className={`menu-link ${isActive("starred") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Star size={20} style={{ opacity: isActive("starred") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Starred</span>
@@ -126,21 +126,21 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/important" onClick={handleNavClick} className={`menu-link ${isActive("important") ? "active" : ""}`}>
+          <Link title="Important" href="/dashboard/important" onClick={handleNavClick} className={`menu-link ${isActive("important") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <AlertTriangle size={20} style={{ opacity: isActive("important") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Important</span>
             </div>
           </Link>
 
-          <Link href="/dashboard/sent" onClick={handleNavClick} className={`menu-link ${isActive("sent") ? "active" : ""}`}>
+          <Link title="Sent" href="/dashboard/sent" onClick={handleNavClick} className={`menu-link ${isActive("sent") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Send size={20} style={{ opacity: isActive("sent") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Sent</span>
             </div>
           </Link>
 
-          <Link href="/dashboard/drafts" onClick={handleNavClick} className={`menu-link ${isActive("drafts") ? "active" : ""}`}>
+          <Link title="Drafts" href="/dashboard/drafts" onClick={handleNavClick} className={`menu-link ${isActive("drafts") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <FileText size={20} style={{ opacity: isActive("drafts") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Drafts</span>
@@ -154,7 +154,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/outbox" onClick={handleNavClick} className={`menu-link ${isActive("outbox") ? "active" : ""}`}>
+          <Link title="Outbox" href="/dashboard/outbox" onClick={handleNavClick} className={`menu-link ${isActive("outbox") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Clock size={20} style={{ opacity: isActive("outbox") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Outbox</span>
@@ -169,7 +169,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/requests" onClick={handleNavClick} className={`menu-link ${isActive("requests") ? "active" : ""}`}>
+          <Link title="Requests" href="/dashboard/requests" onClick={handleNavClick} className={`menu-link ${isActive("requests") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <UserPlus size={20} style={{ opacity: isActive("requests") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Requests</span>
@@ -183,7 +183,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/all-mail" onClick={handleNavClick} className={`menu-link ${isActive("all-mail") ? "active" : ""}`}>
+          <Link title="All Mail" href="/dashboard/all-mail" onClick={handleNavClick} className={`menu-link ${isActive("all-mail") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Mail size={20} style={{ opacity: isActive("all-mail") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>All Mail</span>
@@ -198,21 +198,21 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/snoozed" onClick={handleNavClick} className={`menu-link ${isActive("snoozed") ? "active" : ""}`}>
+          <Link title="Snoozed" href="/dashboard/snoozed" onClick={handleNavClick} className={`menu-link ${isActive("snoozed") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Clock size={20} style={{ opacity: isActive("snoozed") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Snoozed</span>
             </div>
           </Link>
 
-          <Link href="/dashboard/archive" onClick={handleNavClick} className={`menu-link ${isActive("archive") ? "active" : ""}`}>
+          <Link title="Archive" href="/dashboard/archive" onClick={handleNavClick} className={`menu-link ${isActive("archive") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Archive size={20} style={{ opacity: isActive("archive") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Archive</span>
             </div>
           </Link>
 
-          <Link href="/dashboard/spam" onClick={handleNavClick} className={`menu-link ${isActive("spam") ? "active" : ""}`}>
+          <Link title="Spam" href="/dashboard/spam" onClick={handleNavClick} className={`menu-link ${isActive("spam") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <AlertTriangle size={20} style={{ opacity: isActive("spam") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Spam</span>
@@ -226,7 +226,7 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
             </div>
           </Link>
 
-          <Link href="/dashboard/trash" onClick={handleNavClick} className={`menu-link ${isActive("trash") ? "active" : ""}`}>
+          <Link title="Trash" href="/dashboard/trash" onClick={handleNavClick} className={`menu-link ${isActive("trash") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Trash2 size={20} style={{ opacity: isActive("trash") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Trash</span>
@@ -281,14 +281,14 @@ function Sidebar({ isOpen, onClose, onCompose }: SidebarProps) {
 
           <div className="nav-section-label" style={{ marginTop: "24px" }}>More</div>
 
-          <Link href="/dashboard/contacts" onClick={handleNavClick} className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
+          <Link title="Contacts" href="/dashboard/contacts" onClick={handleNavClick} className={`menu-link ${isActive("contacts") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Users size={20} style={{ opacity: isActive("contacts") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Contacts</span>
             </div>
           </Link>
 
-          <Link href="/dashboard/settings" onClick={handleNavClick} className={`menu-link ${isActive("settings") ? "active" : ""}`}>
+          <Link title="Settings" href="/dashboard/settings" onClick={handleNavClick} className={`menu-link ${isActive("settings") ? "active" : ""}`}>
             <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
               <Settings size={20} style={{ opacity: isActive("settings") ? 1 : 0.7 }} />
               <span style={{ flex: 1, fontSize: "14px" }}>Settings</span>

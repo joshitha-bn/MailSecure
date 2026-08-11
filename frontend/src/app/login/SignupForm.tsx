@@ -107,7 +107,7 @@ function PasswordChecklist({ password }: { password: string }) {
 // ─────────────────────────────────────────────
 // Main Signup Component
 // ─────────────────────────────────────────────
-export default function Signup() {
+export default function SignupForm({ onSwitchMode }: { onSwitchMode?: () => void }) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -622,7 +622,7 @@ export default function Signup() {
             <div className="auth-button-row" style={{ marginTop: "8px" }}>
               <button
                 type="button"
-                onClick={() => router.push("/login")}
+                onClick={() => onSwitchMode ? onSwitchMode() : router.push("/login")}
                 style={{
                   background: "none", border: "none",
                   color: "var(--text-muted)", fontWeight: "500",

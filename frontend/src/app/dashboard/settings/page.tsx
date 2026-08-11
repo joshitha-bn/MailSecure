@@ -22,6 +22,17 @@ type Section = "general" | "account" | "security" | "blockchain" | "labels" | "n
 export default function SettingsPage() {
   const router = useRouter()
   const [activeSection, setActiveSection] = useState<Section>("general")
+  const [showMobileNav, setShowMobileNav] = useState(false)
+
+  const SECTIONS: { key: Section; icon: React.ReactNode; label: string }[] = [
+    { key: "general",       icon: <Settings size={14} />,  label: "General" },
+    { key: "account",       icon: <User size={14} />,      label: "Account" },
+    { key: "security",      icon: <Lock size={14} />,      label: "Security" },
+    { key: "blockchain",    icon: <LinkIcon size={14} />,  label: "Blockchain" },
+    { key: "labels",        icon: <Tag size={14} />,       label: "Labels" },
+    { key: "network",       icon: <Globe size={14} />,     label: "Network" },
+    { key: "hybridGateway", icon: <Mail size={14} />,      label: "Hybrid Gateway" },
+  ]
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [deactivateStatus, setDeactivateStatus] = useState("")
@@ -439,29 +450,57 @@ export default function SettingsPage() {
     <div className="settings-container" style={{ display: "flex", height: "100%", overflow: "hidden", minWidth: 0 }}>
 
       {/* ── Mobile dropdown selector (shown only on mobile) ── */}
-      <div className="settings-mobile-select-bar">
+      <div className="settings-mobile-select-bar" style={{ position: "relative", zIndex: 50 }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-gold)" }}>
           <div style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-muted)", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: "8px" }}>Settings</div>
-          <select
-            className="settings-mobile-select"
-            value={activeSection}
-            onChange={e => setActiveSection(e.target.value as Section)}
+          
+          <button 
+            onClick={() => setShowMobileNav(!showMobileNav)}
             style={{
               width: "100%", padding: "10px 14px",
               background: "var(--bg-panel)", border: "1px solid var(--border-gold)",
-              borderRadius: "8px", color: "var(--text-bright)",
+              borderRadius: "8px", color: "var(--gold-mid)",
               fontFamily: "Raleway, sans-serif", fontSize: "14px",
               cursor: "pointer", outline: "none",
+              display: "flex", alignItems: "center", justifyContent: "space-between"
             }}
           >
-            <option value="general">⚙ General</option>
-            <option value="account">👤 Account</option>
-            <option value="security">🔒 Security</option>
-            <option value="blockchain">🔗 Blockchain</option>
-            <option value="labels">🏷 Labels</option>
-            <option value="network">🌐 Network</option>
-            <option value="hybridGateway">✉ Hybrid Gateway</option>
-          </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {SECTIONS.find(s => s.key === activeSection)?.icon}
+              <span style={{ fontWeight: "700" }}>{SECTIONS.find(s => s.key === activeSection)?.label}</span>
+            </div>
+            <span style={{ transform: showMobileNav ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}>▼</span>
+          </button>
+
+          {showMobileNav && (
+            <div style={{
+              position: "absolute", top: "calc(100% - 8px)", left: "16px", right: "16px",
+              background: "var(--bg-card)", border: "1px solid var(--border-gold)",
+              borderRadius: "8px", padding: "8px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.8)", zIndex: 100
+            }}>
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => { setActiveSection(s.key); setShowMobileNav(false); }}
+                  style={{
+                    width: "100%", padding: "12px 14px",
+                    display: "flex", alignItems: "center", gap: "12px",
+                    background: activeSection === s.key ? "rgba(212, 175, 55, 0.1)" : "transparent",
+                    border: "none", borderRadius: "6px",
+                    color: activeSection === s.key ? "var(--gold-mid)" : "var(--text-bright)",
+                    fontSize: "14px", fontWeight: activeSection === s.key ? "700" : "500",
+                    cursor: "pointer", textAlign: "left"
+                  }}
+                >
+                  <span style={{ color: "var(--gold-mid)", display: "flex", alignItems: "center" }}>
+                    {s.icon}
+                  </span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -477,15 +516,7 @@ export default function SettingsPage() {
           padding: "0 4px", marginBottom: "8px",
         }}>Settings</div>
 
-        {([
-          { key: "general",       icon: <Settings size={14} />,  label: "General" },
-          { key: "account",       icon: <User size={14} />,      label: "Account" },
-          { key: "security",      icon: <Lock size={14} />,      label: "Security" },
-          { key: "blockchain",    icon: <LinkIcon size={14} />,  label: "Blockchain" },
-          { key: "labels",        icon: <Tag size={14} />,       label: "Labels" },
-          { key: "network",       icon: <Globe size={14} />,     label: "Network" },
-          { key: "hybridGateway", icon: <Mail size={14} />,      label: "Hybrid Gateway" },
-        ] as { key: Section; icon: React.ReactNode; label: string }[]).map((s) => (
+        {SECTIONS.map((s) => (
           <button key={s.key} style={sectionBtn(s.key)} onClick={() => setActiveSection(s.key)}>
             <span style={{ marginRight: "10px", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>{s.icon}</span>
             <span className="settings-nav-text" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.label}</span>

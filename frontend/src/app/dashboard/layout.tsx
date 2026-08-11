@@ -10,6 +10,7 @@ import { db } from "@/utils/gun"
 import { LabelProvider } from "@/context/LabelContext"
 import { ToastProvider } from "@/context/ToastContext"
 import RouteProgressBar from "@/components/RouteProgressBar"
+import { Plus } from "lucide-react"
 
 const GunStatusBanner = dynamic(() => import("@/components/GunStatusBanner"), { ssr: false })
 const OfflineQueueProcessor = dynamic(() => import("@/components/offlineQueueProcessor"), { ssr: false })
@@ -222,7 +223,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={pathname}
               style={{ 
                 animation: "fadeIn 0.3s ease-out",
-                height: "100%", overflow: "hidden"
               }}
             >
               <Suspense fallback={null}>
@@ -232,6 +232,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <OfflineQueueProcessor />
+
+          <button 
+            className="mobile-fab" 
+            onClick={() => setShowCompose(true)}
+            title="Compose"
+          >
+            <Plus size={24} />
+          </button>
 
           {showCompose && (
             <ComposeWindow onClose={() => setShowCompose(false)} />

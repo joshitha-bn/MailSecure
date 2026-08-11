@@ -165,6 +165,9 @@ export default function SearchFiltersPanel({
             padding: "20px",
             boxShadow: "0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.1)",
             animation: "filterPanelIn 0.18s cubic-bezier(0.4,0,0.2,1)",
+            maxHeight: "min(80dvh, 520px)",
+            overflowY: "auto",
+            overflowX: "hidden",
           }}
         >
           <style>{`
@@ -205,7 +208,7 @@ export default function SearchFiltersPanel({
           </div>
 
           {/* Fields Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "14px", marginBottom: "16px" }}>
             {/* From */}
             <div>
               <label style={labelStyle}>From</label>

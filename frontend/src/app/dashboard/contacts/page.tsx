@@ -265,7 +265,7 @@ export default function ContactsPage() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px", padding: "0 20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap: "12px", padding: "0 20px" }}>
           {filteredContacts.map((contact) => (
             <div key={contact.id} style={{
               background: "var(--bg-card)", border: "1px solid var(--border-gold)",

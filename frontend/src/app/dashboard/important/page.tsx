@@ -276,6 +276,7 @@ export default function ImportantPage() {
       {!selectedMail && (
         <>
           <PageHeader
+            icon={<AlertTriangle size={24} />}
             title="Important"
             count={threads.length}
             searchQuery={searchQuery}

@@ -9,8 +9,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 🛡️ [Test Mode] Always force redirect to signup to show the flow
-    router.push("/signup")
+    router.push("/login")
   }, [router])
 
   if (loading) return null;
@@ -46,7 +45,7 @@ export default function Home() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <button 
             className="btn" 
-            onClick={() => router.push("/signup")}
+            onClick={() => router.push("/login?mode=signup")}
             style={{ width: "100%", padding: "14px" }}
           >
             Get Started

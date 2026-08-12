@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_GUN_RELAY": "https://dmail-secure.onrender.com",
+    "NEXT_PUBLIC_MAIL_DOMAIN": "etherxinnovations.in"
+  }
+}

@@ -285,16 +285,16 @@ export default function SearchFiltersPanel({
           </div>
 
           {/* Toggle Chips Row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "600" }}>Quick filters:</span>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "600", whiteSpace: "nowrap" }}>Quick filters:</span>
 
             {/* Has Attachment */}
             <button
               onClick={() => set("hasAttachment", !filters.hasAttachment)}
               style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "5px 12px", borderRadius: "20px", cursor: "pointer",
-                fontSize: "12px", fontWeight: "600",
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "5px 10px", borderRadius: "20px", cursor: "pointer",
+                fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap", flexShrink: 0,
                 background: filters.hasAttachment ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
                 border: filters.hasAttachment ? "1px solid rgba(212,175,55,0.4)" : "1px solid rgba(255,255,255,0.08)",
                 color: filters.hasAttachment ? "var(--gold-mid)" : "var(--text-dim)",
@@ -309,9 +309,9 @@ export default function SearchFiltersPanel({
             <button
               onClick={() => set("starredOnly", !filters.starredOnly)}
               style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "5px 12px", borderRadius: "20px", cursor: "pointer",
-                fontSize: "12px", fontWeight: "600",
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "5px 10px", borderRadius: "20px", cursor: "pointer",
+                fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap", flexShrink: 0,
                 background: filters.starredOnly ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
                 border: filters.starredOnly ? "1px solid rgba(212,175,55,0.4)" : "1px solid rgba(255,255,255,0.08)",
                 color: filters.starredOnly ? "var(--gold-mid)" : "var(--text-dim)",
@@ -326,12 +326,12 @@ export default function SearchFiltersPanel({
             <button
               onClick={() => setOpen(false)}
               style={{
-                marginLeft: "auto",
+                marginLeft: "auto", flexShrink: 0,
                 padding: "6px 18px", borderRadius: "20px",
                 background: "linear-gradient(135deg, var(--gold-rich, #c9a227), var(--gold-light, #e8cc6e))",
                 border: "none", color: "var(--bg-body, #0a0a0a)",
                 fontSize: "12px", fontWeight: "800", cursor: "pointer",
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "Inter, sans-serif", whiteSpace: "nowrap",
                 boxShadow: "0 4px 14px rgba(212,175,55,0.3)",
                 transition: "opacity 0.2s",
               }}

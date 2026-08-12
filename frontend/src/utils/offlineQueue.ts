@@ -43,7 +43,7 @@ const getLocalRelay = () => {
       const protocol = window.location.protocol === "https:" ? "https:" : "http:";
       return `${protocol}//127.0.0.1:8765/gun`;
     } else {
-      return `https://dmail-secure.onrender.com/gun`;
+      return `https://mailsecure.onrender.com/gun`;
     }
   }
   return "http://localhost:8765/gun";

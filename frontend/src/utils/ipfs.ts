@@ -175,7 +175,7 @@ export const getLocalNode = (port: number) => {
       // In production, the backend is hosted at the Render domain. Other ports (like 5001, 9094) do not
       // exist in production, but for the backend port (8765) we return the Render URL.
       if (port === 8765) {
-        return `https://dmail-secure.onrender.com`;
+        return `https://mailsecure.onrender.com`;
       }
       const protocol = window.location.protocol === "https:" ? "https:" : "http:";
       return `${protocol}//${window.location.hostname}:${port}`;

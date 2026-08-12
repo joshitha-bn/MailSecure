@@ -23,7 +23,7 @@ export const connectRelay = (email: string, keys: { public: string, private: str
   const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   const relayUrl = isLocal 
     ? `${protocol}//${window.location.hostname}:8765/relay`
-    : `wss://dmail-secure.onrender.com/relay`;
+    : `wss://mailsecure.onrender.com/relay`;
   
   console.log(`🔌 [Relay] Connecting to fast-path: ${relayUrl}`)
   socket = new WebSocket(relayUrl)

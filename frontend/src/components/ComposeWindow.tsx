@@ -434,18 +434,17 @@ export default function ComposeWindow({
           onClick={sendMail}
           disabled={isSending}
           style={{
-            background: "var(--gold-mid)", color: "#000", border: "none",
-            padding: "7px 14px", borderRadius: "8px", fontWeight: "700",
-            fontSize: "13px", cursor: isSending ? "not-allowed" : "pointer",
-            display: "flex", alignItems: "center", gap: "6px",
-            opacity: isSending ? 0.7 : 1, minHeight: "36px", whiteSpace: "nowrap"
+            background: "none", border: "none", color: "var(--gold-mid)",
+            fontWeight: "700", fontSize: "14px", cursor: isSending ? "not-allowed" : "pointer",
+            opacity: isSending ? 0.5 : 1, padding: "8px",
+            display: "flex", alignItems: "center"
           }}
         >
-          <Send size={13} />
-          {isSending ? "..." : "Send"}
+          <Send size={18} />
         </button>
       </div>
-      {/* ── Header (Desktop) ── */}
+
+      {/* ── Desktop Header ── */}
       <div className="compose-desktop-controls" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 20px",

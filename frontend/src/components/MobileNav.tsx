@@ -63,14 +63,14 @@ export default function MobileNav({ onCompose }: MobileNavProps) {
   ]
 
   return (
-    <nav style={{
+    <nav className="mobile-nav" style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
-      height: "64px",
+      minHeight: "64px",
+      paddingBottom: "env(safe-area-inset-bottom)",
       background: "var(--bg-card)",
       borderTop: "1px solid var(--border-gold)",
       display: "flex", alignItems: "center",
       zIndex: 500,
-      paddingBottom: "env(safe-area-inset-bottom)",
       boxShadow: "var(--shadow-deep)",
     }}>
       {navItems.map((item, idx) => {

@@ -347,11 +347,11 @@ export default function ConversationView({
 
                       {/* Security Bar */}
                       <div style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px",
                         background: "rgba(232, 185, 35, 0.05)", border: "1px solid rgba(232, 185, 35, 0.15)",
                         padding: "8px 12px", borderRadius: "6px", marginBottom: "16px"
                       }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "#E8B923" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px", fontSize: "12px", color: "#E8B923" }}>
                           <Lock size={14} />
                           <span style={{ fontFamily: "monospace" }}>0x3f7a...d4c2 → 0x9b1e...a83f</span>
                           <span style={{ color: "rgba(232, 185, 35, 0.3)" }}>|</span>
@@ -369,7 +369,7 @@ export default function ConversationView({
                       </div>
 
                       {/* Action Buttons Row */}
-                      <div style={{ display: "flex", gap: "8px", marginBottom: "32px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "24px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "32px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "24px" }}>
                         <button
                           onClick={() => handleReply(msg)}
                           style={{

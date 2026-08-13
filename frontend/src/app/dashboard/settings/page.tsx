@@ -452,8 +452,6 @@ export default function SettingsPage() {
       {/* ── Mobile dropdown selector (shown only on mobile) ── */}
       <div className="settings-mobile-select-bar" style={{ position: "relative", zIndex: 50 }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-gold)" }}>
-          <div style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-muted)", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: "8px" }}>Settings</div>
-          
           <button 
             onClick={() => setShowMobileNav(!showMobileNav)}
             style={{
@@ -527,8 +525,8 @@ export default function SettingsPage() {
       {/* ── Content ── */}
       <div className="settings-content-panel" style={{ flex: 1, overflowY: "auto", padding: "24px 28px", minWidth: 0, boxSizing: "border-box" }}>
 
-        {/* ── Unified Page Header ── */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "20px", borderBottom: "1px solid var(--border-color)" }}>
+        {/* ── Unified Page Header (Hidden on Mobile to save space/remove duplication) ── */}
+        <div className="hide-on-mobile" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "20px", borderBottom: "1px solid var(--border-color)" }}>
           <Settings size={24} color="var(--gold-mid)" />
           <div>
             <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-bright)", margin: 0, fontFamily: "Inter, sans-serif" }}>Settings</h1>
@@ -633,15 +631,17 @@ export default function SettingsPage() {
                 background: "var(--bg-panel)", border: "1px solid var(--border-color)",
                 borderRadius: "8px", padding: "12px 16px", color: "var(--text-bright)",
                 fontFamily: "Courier New, monospace", fontSize: "14px",
-                display: "flex", alignItems: "center", justifyContent: "space-between"
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px"
               }}>
-                {user.email || "Loading..."}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, display: "block" }}>
+                  {user.email || "Loading..."}
+                </span>
                 <button 
                   onClick={() => copyToClipboard(user.email)} 
-                  style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer" }}
+                  style={{ background: "none", border: "none", color: "var(--gold-mid)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}
                   title="Copy Address"
                 >
-                  <Copy size={14} />
+                  <Copy size={16} />
                 </button>
               </div>
             </div>

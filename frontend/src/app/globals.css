@@ -4152,6 +4152,7 @@ body {
   /* Hide divider */
   .compose-bottom-toolbar > div > div[style*="width: 1px"] {
     display: none !important;
+  }
   /* 21. MOBILE FAB */
   .mobile-fab {
     display: flex !important;

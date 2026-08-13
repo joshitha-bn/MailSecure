@@ -416,36 +416,8 @@ export default function ComposeWindow({
         borderTopColor: "var(--gold-mid)",
       }}
     >
-      {/* ── Mobile Full-Screen Top Bar ── */}
-      <div className="compose-mobile-header">
-        <button
-          onClick={onClose}
-          style={{
-            background: "none", border: "none", color: "var(--gold-mid)",
-            cursor: "pointer", display: "flex", alignItems: "center", gap: "4px",
-            fontSize: "14px", fontWeight: "600", padding: "6px 8px", minHeight: "40px",
-            borderRadius: "6px"
-          }}
-        >
-          <X size={18} /> Close
-        </button>
-        <span className="mobile-header-title">New Message</span>
-        <button
-          onClick={sendMail}
-          disabled={isSending}
-          style={{
-            background: "none", border: "none", color: "var(--gold-mid)",
-            fontWeight: "700", fontSize: "14px", cursor: isSending ? "not-allowed" : "pointer",
-            opacity: isSending ? 0.5 : 1, padding: "8px",
-            display: "flex", alignItems: "center"
-          }}
-        >
-          <Send size={18} />
-        </button>
-      </div>
-
-      {/* ── Desktop Header ── */}
-      <div className="compose-desktop-controls" style={{
+      {/* ── Universal Header ── */}
+      <div className="compose-universal-header" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 20px",
         background: "var(--bg-compose-hdr)",

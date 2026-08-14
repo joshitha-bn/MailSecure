@@ -802,7 +802,7 @@ export default function ComposeWindow({
             onMouseLeave={e => { if (!draftSaved) { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border-color)" } }}
           >
             {draftSaved ? <Check size={13} /> : <Save size={13} />}
-            {draftSaved ? "Saved!" : "Draft"}
+            <span>{draftSaved ? "Saved!" : "Draft"}</span>
           </button>
         </div>
 
